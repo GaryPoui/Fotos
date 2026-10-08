@@ -10,7 +10,9 @@ No habrá registro público. La primera versión permite una contraseña compart
 ### II. Persistencia real
 El contenido MUST guardarse en una base de datos y almacenamiento persistente, sea un volumen
 del servidor o un proveedor remoto privado. El disco efímero sólo puede usarse como staging.
-El navegador sólo guarda preferencias; nunca será el único almacenamiento de recuerdos.
+El navegador guarda preferencias y copias temporales explícitas de subidas pendientes;
+éstas se eliminan al completar, descartar o cerrar sesión. Nunca será el único almacenamiento
+de recuerdos que se presenten como guardados.
 Las subidas fallidas MUST limpiarse y los errores MUST explicarse sin perder el formulario.
 
 ### III. Desarrollo desde especificaciones
@@ -32,7 +34,8 @@ No se incorporarán servicios de pago ni dependencias de cuentas sin necesidad.
 
 ## Restricciones del producto
 Una sola pareja y una instancia del servidor. Fotos JPEG/PNG/WebP/GIF/AVIF, videos MP4/WebM
-y audio MP3/WAV/OGG/M4A según compatibilidad del navegador. Sin transcodificación en v1.
+y audio MP3/WAV/OGG/M4A según compatibilidad del navegador. Se permite conversión HEIC/HEIF a JPEG en el dispositivo para las fotos de iPhone;
+el original permanece con el usuario y se conserva el JPEG. Sin transcodificación de video.
 Node.js, TypeScript, React y SQLite permiten desplegar el mismo repositorio en un servidor
 con disco persistente. Para hosting gratuito se admite Firestore o PostgreSQL y almacenamiento de objetos
 remotos privados; esta ampliación responde al pedido de presupuesto cero del 2026-10-08.
@@ -48,4 +51,4 @@ Las modificaciones deben justificar su motivo y actualizar su versión: major pa
 incompatibles, minor para principios nuevos y patch para aclaraciones.
 Cada cierre de spec debe revisar privacidad, persistencia y verificación.
 
-**Version**: 1.2.1 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-08
+**Version**: 1.3.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-08

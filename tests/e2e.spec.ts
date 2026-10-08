@@ -343,3 +343,13 @@ test('interrupted upload restores its draft after reload without duplicating a c
  await page.getByRole('button',{name:'Subir recuerdos',exact:true}).click();
  await expect(page.getByText('Recuperamos tu tanda pendiente.',{exact:false})).toHaveCount(0);
 });
+
+test('iPhone HEIC converts on device into a private viewable JPEG',async({page},info)=>{
+ await login(page);const title='HEIC '+info.project.name;
+ await page.getByRole('button',{name:'Subir recuerdos',exact:true}).click();
+ await page.getByLabel('Fotos y videos',{exact:true}).setInputFiles({name:'colores.heic',mimeType:'image/heic',buffer:readFileSync(new URL('./fixtures/cielo.heic',import.meta.url))});
+ await page.getByLabel('Título',{exact:true}).fill(title);await page.getByRole('button',{name:'Guardar en nuestro rincón'}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+ const library=await (await page.request.get('/api/library')).json();const photo=library.media.find((m:{title:string})=>m.title===title);expect(photo.mime).toBe('image/jpeg');
+ const original=await page.request.get('/api/files/'+photo.id);expect(original.headers()['content-type']).toContain('image/jpeg');
+ await page.getByRole('button',{name:'Abrir '+title,exact:true}).click();await expect.poll(()=>page.locator('dialog img').first().evaluate((i:HTMLImageElement)=>i.naturalWidth)).toBeGreaterThan(0);
+});

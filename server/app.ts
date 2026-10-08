@@ -148,6 +148,7 @@ export async function createApp(options: AppOptions) {
     helmet({
       contentSecurityPolicy: {
         directives: {
+          workerSrc: ["'self'", "blob:"],
           "img-src": ["'self'", "blob:", "data:"],
           "media-src": ["'self'", "blob:"],
         },

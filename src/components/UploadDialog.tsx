@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Dialog } from "./Dialog";
 import { bytes, today, upload } from "../lib";
+import { prepareImage } from "../prepare-image";
 import { cloudEnabled } from '../cloud/config';
 import { loadDraft, saveDraft, type UploadItem as Item } from '../upload-queue';
 export function UploadDialog({
@@ -95,9 +96,13 @@ export function UploadDialog({
       }
       change(i, { status: "uploading", error: undefined, progress: 0 });
       try {
+        change(i,{status:'preparing'});
+        const prepared=type==='memories'?await prepareImage(items[i].file,maxFile,message=>change(i,{error:message})):items[i].file;
+        remaining[i]={...remaining[i],file:prepared};
+        change(i,{file:prepared,status:'uploading',error:undefined});
         await saveDraft(draft(remaining)).catch(()=>{});
         await upload(
-          items[i].file,
+          prepared,
           {
             title:
               items.length === 1 && title.trim()
@@ -193,7 +198,7 @@ export function UploadDialog({
             accept={
               type === "music"
                 ? ".mp3,.wav,.ogg,.opus,.m4a"
-                : ".jpg,.jpeg,.png,.webp,.gif,.avif,.mp4,.webm"
+                : ".jpg,.jpeg,.png,.webp,.gif,.avif,.heic,.heif,.mp4,.webm"
             }
             disabled={busy}
             onChange={(e) => {
@@ -202,6 +207,7 @@ export function UploadDialog({
             }}
           />
           <small>Hasta {bytes(maxFile)} por archivo · 20 por tanda</small>
+          {type==='memories'&&<small>HEIC de iPhone: se convierte a JPEG acá, sin enviarlo a otros sitios. Conservá el original; se guarda el JPEG. HEIC hasta 20 MB y 32 megapíxeles.</small>}
         </div>
         {items.length > 0 && (
           <ul className="upload-list">
@@ -220,7 +226,7 @@ export function UploadDialog({
                   <strong>{item.file.name}</strong>
                   <small>
                     {item.error ||
-                      (item.status === "uploading"
+                      (item.status === "preparing" ? "Preparando foto…" : item.status === "uploading"
                         ? item.progress === 100
                           ? "Procesando…"
                           : item.progress + "%"
