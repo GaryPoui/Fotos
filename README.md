@@ -11,7 +11,7 @@ Diseño **mobile first**, celeste y rosado, navegación inferior y controles tá
 - Canciones con reproductor persistente entre secciones, volumen y posición.
 - Frases/cartas con edición, búsqueda, favoritos y lectura con saltos de línea.
 - Nombres, título y fecha de la relación personalizables.
-- Contraseña compartida, archivos privados y sesiones persistentes de siete días.
+- Contraseña compartida y archivos privados; sesión local de siete días y sesión cloud mediante Firebase Auth.
 - SQLite y archivos en disco, Docker, respaldo/restauración y CI.
 
 ## Inicio local
@@ -46,9 +46,12 @@ Ver [evidencia y límites](docs/verification.md).
 
 ## Publicar online
 
-Ver [hosting y respaldos](docs/hosting.md). Se necesita servidor Node/Docker con HTTPS y disco
-persistente. Publicar requiere elegir proveedor, origen/dominio y contraseña. No se contrató hosting
-ni se publicaron fotos personales.
+La opción cloud gratuita usa **Firebase Hosting/Auth/Firestore + Supabase Free** para
+archivos privados: ver [configuración gratuita](docs/free-hosting.md) y [spec 008](specs/008-firebase-hybrid/spec.md).
+La modalidad local/Node sigue disponible en [hosting y respaldos](docs/hosting.md), con HTTPS y disco
+persistente. No se publican automáticamente recuerdos locales ni se habilita facturación.
+Web publicada: **https://fotosconailu.web.app**.
+El estado verificado de publicación está en [docs/verification.md](docs/verification.md).
 
 ```powershell
 npm run build
@@ -73,8 +76,10 @@ del agente, no comandos ficticios de terminal.
 | [004](specs/004-soundtrack/spec.md) | Música y reproductor |
 | [005](specs/005-love-notes/spec.md) | Frases y cartas |
 | [006](specs/006-online-readiness/spec.md) | Hosting, respaldo y verificación |
+| [008](specs/008-firebase-hybrid/spec.md) | Firebase Spark y archivos privados en Supabase Free |
 
-Cada spec incluye plan, investigación, modelo, contratos, guía y tareas.
+Los specs 001–006 incluyen plan, investigación, modelo, contratos, guía y tareas.
+Spec 008 documenta la alternativa cloud implementada con spec, plan y tareas.
 Flujo: `$speckit-specify` → `$speckit-plan` → `$speckit-tasks` → `$speckit-implement` → `$speckit-converge`.
 
 Los seis specs están implementados y verificados: 12 pruebas de servidor/respaldo/producción,
@@ -86,6 +91,7 @@ Para retomar un spec existente desde PowerShell, definir su carpeta antes de los
 
 Una pareja/instancia; contraseña compartida sin recuperación por email. Sin transcodificación:
 HEIC/HEVC deben exportarse como JPEG o MP4 compatible. Audio/video depende del navegador.
-200 MiB por archivo y 1 GiB de originales por defecto, configurables. Reservar espacio extra para
-miniaturas/temporales. Música sólo por acción explícita. node:sqlite es experimental en Node 22.
+En local: 200 MiB por archivo y 1 GiB de originales por defecto, configurables; reservar
+espacio extra para miniaturas/temporales. En cloud: 50 MB por archivo y 900 MB reservados
+entre originales y miniaturas, dentro del plan Free. Música sólo por acción explícita. node:sqlite es experimental en Node 22.
 Chromium emulando celular no equivale a verificar Safari/iOS real.

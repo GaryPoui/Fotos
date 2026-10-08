@@ -1,3 +1,4 @@
+import { cloudEnabled } from "./cloud/config";
 export const today = () => {
   const d = new Date();
   return [
@@ -26,6 +27,7 @@ export async function api<T>(
   method = "GET",
   body?: unknown,
 ): Promise<T> {
+  if (cloudEnabled) return (await import("./cloud/client")).cloudApi<T>(path, method, body);
   let response: Response;
   try {
     response = await fetch("/api" + path, {
@@ -51,6 +53,7 @@ export function upload(
   fields: Record<string, string>,
   progress: (n: number) => void,
 ): Promise<void> {
+  if (cloudEnabled) return import("./cloud/client").then(module => module.cloudUpload(file, fields, progress));
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/media");

@@ -2,7 +2,54 @@
 
 Fecha: 2026-10-08 (America/Buenos_Aires).
 
-## Comprobado
+## Revalidación local antes del hosting (2026-10-08)
+
+- `npm ci`: dependencias instaladas; auditoría sin vulnerabilidades.
+- `npm run build`: TypeScript, Vite y servidor compilados correctamente.
+- `npm test`: 12/12 pruebas PASS.
+- `npm run test:e2e`: 8/8 recorridos PASS en Chromium móvil/escritorio.
+- `npm run dev`: cliente en http://127.0.0.1:5173/ y API en puerto 3001;
+  `/api/health` responde correctamente. Contraseña generada sólo en `.env`, ignorado por Git.
+- Se comprobó adicionalmente el login real contra Vite y la biblioteca autenticada;
+  captura local en `test-results/local-running.png`. Captura móvil de galería revisada.
+- Firebase MCP autenticado; proyecto `fotosconailu` confirmado. La configuración inicial
+  fue reemplazada por la alternativa Firebase parcial autorizada; ver evidencia cloud abajo.
+- El chat compartido no pudo leerse: el acceso directo respondió HTTP 403.
+  El contexto de continuación procede del árbol actual, historial Git y spec 007.
+- PowerShell no está instalado en este entorno: no se ejecutó el resolver `.ps1` de
+  Spec Kit. Se revisaron directamente spec, plan, tasks, investigación, modelo,
+  contratos, quickstart y checklist de 16/16 elementos completos. Sin hooks configurados.
+
+Estos resultados corresponden a la modalidad local. No demuestran persistencia remota
+ni publicación HTTPS; las tareas pendientes de spec 007 siguen pendientes.
+
+## Publicación Firebase parcial verificada (2026-10-08)
+
+- URL pública HTTPS: **https://fotosconailu.web.app**, HTTP 200; cabeceras CSP,
+  noindex, DENY y no-store en archivos privados comprobadas.
+- Firebase `fotosconailu`: Spark, facturación deshabilitada; Auth email/password,
+  cuenta compartida con claims administrativos, Firestore Standard y Hosting desplegados.
+- Supabase `mzujwjvsallqhxndodjf`: región São Paulo, organización **Free**, integración
+  Firebase real, bucket privado `rincon`, SQL/RLS/trigger y RPC aplicados.
+- `npm run build`, `npm run build:cloud`: PASS. `npm test`: 19 PASS y 5 de emulador
+  omitidas en esa ejecución; `npm run test:rules`: las 5 de Firestore PASS.
+- `npm run test:e2e`: 8/8 PASS en móvil/escritorio con modalidad local conservada.
+- Cuota real concurrente: con 850 MB reservados, dos reservas simultáneas de 40 MB
+  admitieron sólo una (890 MB total); reservas sintéticas eliminadas al terminar.
+- `node scripts/smoke-cloud.mjs https://fotosconailu.web.app`: PASS real en Chromium
+  móvil. Login, carta y sesión persistentes tras recarga; original/miniatura y recarga;
+  Range HTTP 206; cierre de sesión bloquea nuevas lecturas con 401; audio WAV y video
+  WebM se suben, reproducen y eliminan. El video abre pausado. Sin errores JS.
+- La prueba de reproducción detectó que CORS oculta Content-Range de Storage. El proxy
+  ahora reconstruye ese header usando tamaño inmutable y comprueba la longitud.
+  La corrección fue publicada y verificada reproduciendo audio/video en HTTPS.
+- Todo el contenido de pruebas real fue eliminado; bucket y reservas quedaron vacíos.
+  No se migraron ni modificaron recuerdos personales locales.
+- Auditoría npm sin vulnerabilidades. Captura móvil en `test-results/cloud-real-mobile.png`.
+- Código/documentación de esta alternativa: spec 008. Respaldo cloud y límites de
+  cuotas/disponibilidad/sesión documentados en [free-hosting.md](free-hosting.md).
+
+## Verificación histórica de la modalidad Node/SQLite
 
 - TypeScript cliente/servidor: PASS.
 - Compilación Vite y servidor: PASS.
@@ -29,13 +76,12 @@ Revisión de los seis spec.md, plan.md y tasks.md: 24 requisitos funcionales, 24
 18 escenarios de aceptación y cinco principios de constitución. Sin brechas de implementación pendientes.
 La primera revisión detectó el bloqueo con PID reutilizado en Docker; se agregó T007 al spec 006,
 se implementó el bloqueo compartido con heartbeat y se verificó el reemplazo real del contenedor.
-Todas las tareas quedan marcadas completas. La publicación externa es un paso de configuración,
-no un despliegue realizado ni una cuenta contratada.
+Todas las tareas de specs 001–006 quedan completas. La alternativa vigente de publicación
+es spec 008; spec 007 conserva sus pendientes porque corresponde a otra arquitectura.
 
 ## Pendiente externo
 
 - Docker CLI local sin daemon; imagen construida correctamente en GitHub Actions sobre Linux.
-- Sin proveedor/credenciales de hosting: no hay despliegue online verificado.
 - Sin Safari/iOS real. Chromium emula viewport/touch, no el motor Safari.
 
 Tests con contenido sintético y directorios temporales, sin tocar recuerdos personales.

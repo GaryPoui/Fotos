@@ -1,0 +1,8 @@
+project_id = "nuestro-rincon"
+
+[auth]
+enable_signup = false
+
+[auth.third_party.firebase]
+enabled = true
+project_id = "fotosconailu"

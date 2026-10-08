@@ -1,5 +1,8 @@
 # Publicar nuestro rincón
 
+Para el despliegue gratuito autorizado con Firebase parcial, seguir [Firebase + Supabase Free](free-hosting.md).
+El resto de esta guía corresponde a la modalidad Node/SQLite con volumen persistente.
+
 Esta aplicación necesita **un servidor Node y disco persistente**. GitHub Pages y un hosting
 estático no guardan recuerdos ni ejecutan esta API. El repo incluye Docker; no depende de Sites.
 

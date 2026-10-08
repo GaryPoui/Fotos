@@ -1,3 +1,4 @@
+import { cloudEnabled, storageReady } from "./cloud/config";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Heart,
@@ -151,6 +152,9 @@ export default function App() {
         </div>
       </header>
       <main id="contenido">
+        {cloudEnabled && !storageReady && (
+          <p className="error-banner" role="status">Estamos preparando el álbum online. Ya podés guardar cartas y personalizar nuestro rincón; las fotos y canciones estarán disponibles al terminar la configuración.</p>
+        )}
         {error && (
           <div role="alert" className="error-banner">
             <span>{error}</span>
