@@ -1,0 +1,17 @@
+node_modules/
+dist/
+data/
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+playwright-report/
+test-results/
+.sites-runtime/
+.specify/feature.json
+.agents/*
+!.agents/skills/
+.DS_Store
+Thumbs.db
+
