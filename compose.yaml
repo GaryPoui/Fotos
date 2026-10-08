@@ -1,0 +1,20 @@
+services:
+  rincon:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      NODE_ENV: production
+      APP_PASSWORD: ${APP_PASSWORD:?Definir APP_PASSWORD en .env}
+      APP_ORIGIN: ${APP_ORIGIN:?Definir APP_ORIGIN como URL HTTPS}
+      DATA_DIR: /var/data
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      MAX_FILE_MB: ${MAX_FILE_MB:-200}
+      MAX_STORAGE_MB: ${MAX_STORAGE_MB:-1024}
+    volumes:
+      - rincon-data:/var/data
+    stop_grace_period: 30s
+volumes:
+  rincon-data:
+

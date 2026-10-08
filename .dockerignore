@@ -1,0 +1,15 @@
+node_modules
+.git
+.agents
+.specify
+dist
+dist-server
+data
+backups
+.env
+.env.*
+coverage
+test-results
+playwright-report
+*.log
+

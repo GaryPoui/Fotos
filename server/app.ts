@@ -184,7 +184,8 @@ export async function createApp(options: AppOptions) {
   const dist = resolve('dist');
   if (existsSync(dist)) { app.use(express.static(dist)); app.get('/{*path}', (_req, res) => res.sendFile(join(dist, 'index.html'))); }
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    if (res.headersSent) return;
+    if (res.headersSent) { _next(error); return; }
+    if (typeof error === 'object' && error !== null && 'status' in error && error.status === 416) { res.status(416).json({ error: 'Rango del archivo inválido.' }); return; }
     if (error instanceof ApiError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof ZodError || error instanceof SyntaxError) { res.status(400).json({ error: 'Revisá los campos: hay datos vacíos, inválidos o demasiado largos.' }); return; }
     if (error instanceof multer.MulterError) { res.status(error.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ error: error.code === 'LIMIT_FILE_SIZE' ? 'El archivo supera el tamaño permitido.' : 'Subí un solo archivo por vez, con los campos indicados.' }); return; }
