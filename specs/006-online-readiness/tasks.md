@@ -20,4 +20,5 @@ Entregas incrementales con validación, commit/push y converge.
 
 
 ## Phase 3: Convergence
-- [ ] T007 [US1] CRITICAL Corregir bloqueo obsoleto con PID reutilizado en server/lifecycle.ts y verificar reemplazo de contenedor conservando volumen en .github/workflows/ci.yml, por FR-001 y prueba independiente de reinicio (partial).
+- [X] T007 [US1] CRITICAL Corregir bloqueo obsoleto con PID reutilizado en server/lifecycle.ts y verificar reemplazo de contenedor conservando volumen en .github/workflows/ci.yml, por FR-001 y prueba independiente de reinicio (partial).
+

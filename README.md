@@ -77,6 +77,11 @@ del agente, no comandos ficticios de terminal.
 Cada spec incluye plan, investigación, modelo, contratos, guía y tareas.
 Flujo: `$speckit-specify` → `$speckit-plan` → `$speckit-tasks` → `$speckit-implement` → `$speckit-converge`.
 
+Los seis specs están implementados y verificados: 12 pruebas de servidor/respaldo/producción,
+8 recorridos de navegador y prueba de Docker conservando datos al reemplazar el contenedor.
+Para retomar un spec existente desde PowerShell, definir su carpeta antes de los scripts de Spec Kit:
+`$env:SPECIFY_FEATURE_DIRECTORY = 'specs/002-media-library'`.
+
 ## Límites conocidos
 
 Una pareja/instancia; contraseña compartida sin recuperación por email. Sin transcodificación:

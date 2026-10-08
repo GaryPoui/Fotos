@@ -15,3 +15,10 @@ PostgreSQL/S3 requieren cuentas; browser-only no sirve entre dispositivos.
 ## Limitations
 Firma no garantiza decodificación. Sin antivirus/transcodificación. node:sqlite experimental en Node 22.
 Disco de Render requiere plan pago; Docker permite otros proveedores.
+
+## Bloqueo del volumen
+Decisión: proper-lockfile con heartbeat cada 2 segundos y vencimiento a los 10 segundos.
+El servidor y el respaldo adquieren el mismo bloqueo; la copia de archivos es asíncrona para renovarlo.
+Un PID no identifica un proceso a través de namespaces de Docker. El bloqueo por lease permite recuperar
+un cierre forzado sin abrir el volumen simultáneamente. Verificado con reemplazo real de contenedor en CI.
+[Diseño de proper-lockfile](https://github.com/moxystudio/node-proper-lockfile).
