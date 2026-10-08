@@ -23,6 +23,7 @@ import { Player } from "./components/Player";
 import { Notes } from "./components/Notes";
 import { NoteDialog } from "./components/NoteDialog";
 import { Dialog } from "./components/Dialog";
+import { BackupDialog } from "./components/BackupDialog";
 type Page = "memories" | "music" | "words";
 export default function App() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -35,6 +36,7 @@ export default function App() {
   );
   const [noteEdit, setNoteEdit] = useState<Note | "new" | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
   const [playRequest, setPlayRequest] = useState(0);
   const refresh = useCallback(async () => {
@@ -63,6 +65,7 @@ export default function App() {
       setUploadType(null);
       setNoteEdit(null);
       setSettingsOpen(false);
+      setBackupOpen(false);
       setError("La sesión terminó. Volvé a ingresar.");
     };
     window.addEventListener("session-expired", handler);
@@ -353,9 +356,11 @@ export default function App() {
           onChanged={changed}
         />
       )}
+      {backupOpen && <BackupDialog onClose={() => setBackupOpen(false)} />}
       {settingsOpen && library && (
         <SettingsDialog
           settings={library.settings}
+          onBackup={() => { setSettingsOpen(false); setBackupOpen(true); }}
           onClose={() => setSettingsOpen(false)}
           onChanged={changed}
         />
@@ -454,10 +459,12 @@ function Login({
 }
 function SettingsDialog({
   settings,
+  onBackup,
   onClose,
   onChanged,
 }: {
   settings: Settings;
+  onBackup: () => void;
   onClose: () => void;
   onChanged: (m: string) => Promise<void>;
 }) {
@@ -466,6 +473,7 @@ function SettingsDialog({
     [busy, setBusy] = useState(false);
   return (
     <Dialog title="Nuestro toque personal" onClose={onClose} busy={busy}>
+      <button className="button secondary full-width" disabled={busy} onClick={onBackup}>Descargar una copia de nuestros recuerdos</button>
       <form
         onSubmit={async (e) => {
           e.preventDefault();

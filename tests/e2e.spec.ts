@@ -309,3 +309,17 @@ test("video uploads privately and opens paused with working playback", async ({
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await assertFits(page);
 });
+
+test('private backup downloads original, thumbnail and readable metadata', async ({page},info)=>{
+ await login(page);await uploadPhoto(page,'Respaldo '+info.project.name);
+ await page.getByRole('button',{name:'Personalizar nuestro rincón'}).click();
+ await page.getByRole('button',{name:'Descargar una copia de nuestros recuerdos'}).click();
+ const waiting=page.waitForEvent('download');await page.getByRole('button',{name:'Descargar nuestros recuerdos',exact:true}).click();
+ const download=await waiting;expect(download.suggestedFilename()).toContain('parte-1-de-1.zip');
+ const {unzipSync,strFromU8}=await import('fflate');const files=unzipSync(readFileSync((await download.path())!));
+ const manifest=JSON.parse(strFromU8(files['recuerdos.json']));
+ const photo=manifest.media.find((m:{title:string})=>m.title==='Respaldo '+info.project.name);expect(photo).toBeTruthy();
+ expect(files['archivos/'+photo.id+'/original.png']).toEqual(new Uint8Array(png));
+ expect(files['archivos/'+photo.id+'/miniatura.webp'].length).toBeGreaterThan(0);
+ await expect(page.getByText('Todas las partes están preparadas.',{exact:false})).toBeVisible();await assertFits(page);
+});
