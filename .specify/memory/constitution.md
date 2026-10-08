@@ -8,7 +8,8 @@ Contraseñas, cookies, contenido personal y datos de ejecución MUST permanecer 
 No habrá registro público. La primera versión permite una contraseña compartida por la pareja.
 
 ### II. Persistencia real
-El contenido MUST guardarse en una base de datos y un volumen persistente del servidor.
+El contenido MUST guardarse en una base de datos y almacenamiento persistente, sea un volumen
+del servidor o un proveedor remoto privado. El disco efímero sólo puede usarse como staging.
 El navegador sólo guarda preferencias; nunca será el único almacenamiento de recuerdos.
 Las subidas fallidas MUST limpiarse y los errores MUST explicarse sin perder el formulario.
 
@@ -33,7 +34,9 @@ No se incorporarán servicios de pago ni dependencias de cuentas sin necesidad.
 Una sola pareja y una instancia del servidor. Fotos JPEG/PNG/WebP/GIF/AVIF, videos MP4/WebM
 y audio MP3/WAV/OGG/M4A según compatibilidad del navegador. Sin transcodificación en v1.
 Node.js, TypeScript, React y SQLite permiten desplegar el mismo repositorio en un servidor
-con disco persistente. Un hosting estático por sí solo no satisface la persistencia requerida.
+con disco persistente. Para hosting gratuito se admite PostgreSQL y almacenamiento de objetos
+remotos privados; esta ampliación responde al pedido de presupuesto cero del 2026-10-08.
+Un hosting estático por sí solo no satisface la persistencia requerida.
 
 ## Flujo de desarrollo
 Constitución → especificación → plan → tareas → implementación → verificación/convergencia.
@@ -45,4 +48,4 @@ Las modificaciones deben justificar su motivo y actualizar su versión: major pa
 incompatibles, minor para principios nuevos y patch para aclaraciones.
 Cada cierre de spec debe revisar privacidad, persistencia y verificación.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-07
+**Version**: 1.2.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-08
