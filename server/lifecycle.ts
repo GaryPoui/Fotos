@@ -1,39 +1,32 @@
-import {
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  unlinkSync,
-  existsSync,
-} from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-export function assertStopped(dir: string) {
-  const path = join(dir, "server.pid");
-  if (!existsSync(path)) return;
-  const pid = Number(readFileSync(path, "utf8"));
-  if (!Number.isSafeInteger(pid) || pid <= 0)
-    throw new Error(
-      "server.pid inválido: verificar manualmente antes de continuar.",
-    );
+import lockfile from "proper-lockfile";
+
+// A shared-volume heartbeat works across container PID namespaces.
+// After SIGKILL the stale lease expires; a live server or backup keeps it fresh.
+export async function acquireLock(dir: string, waitForStale = true) {
+  mkdirSync(dir, { recursive: true });
   try {
-    process.kill(pid, 0);
+    const release = await lockfile.lock(dir, {
+      lockfilePath: join(dir, ".server.lock"),
+      stale: 10000,
+      update: 2000,
+      retries: waitForStale
+        ? { retries: 12, minTimeout: 1000, maxTimeout: 1000 }
+        : 0,
+    });
+    let released = false;
+    return async () => {
+      if (!released) {
+        released = true;
+        await release();
+      }
+    };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ESRCH") {
-      unlinkSync(path);
-      return;
-    }
+    if ((error as NodeJS.ErrnoException).code === "ELOCKED")
+      throw new Error(
+        "El servidor está activo o el volumen se está respaldando. Detenelo y esperá 10 segundos antes de continuar.",
+      );
     throw error;
   }
-  throw new Error(
-    "El servidor está activo. Detenelo antes de respaldar o iniciar otra instancia.",
-  );
-}
-export function acquireLock(dir: string) {
-  mkdirSync(dir, { recursive: true });
-  assertStopped(dir);
-  const path = join(dir, "server.pid");
-  writeFileSync(path, String(process.pid), { flag: "wx" });
-  return () => {
-    if (existsSync(path) && readFileSync(path, "utf8") === String(process.pid))
-      unlinkSync(path);
-  };
 }

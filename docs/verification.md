@@ -16,10 +16,12 @@ Fecha: 2026-10-08 (America/Buenos_Aires).
   continuidad entre secciones y pausa. Video WebM: subida, apertura pausada y reproducción.
 - Layout: sin desbordamiento a 360/390 px; botones visibles >=44 × 44 px: PASS.
 - Revisión visual de capturas mobile de galería, escritos y reproductor: PASS.
+- Inicio local con npm run dev y autenticación real a través del proxy Vite: PASS.
+  Proxy configurado con changeOrigin=false para conservar la verificación de origen.
 
 ## Pendiente externo
 
-- Docker CLI disponible; daemon no activo, por lo que no se ejecutó build local de imagen.
+- Docker CLI local sin daemon; imagen construida correctamente en GitHub Actions sobre Linux.
 - Sin proveedor/credenciales de hosting: no hay despliegue online verificado.
 - Sin Safari/iOS real. Chromium emula viewport/touch, no el motor Safari.
 

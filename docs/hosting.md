@@ -38,7 +38,8 @@ Es necesario conservar DATA_DIR al actualizar código.
 
 ## Respaldo consistente
 
-1. Detener el servidor y esperar a que termine. El script rechaza el proceso activo de server.pid.
+1. Detener el servidor y esperar a que termine. Tras un cierre forzado, esperar 10 segundos.
+   El servidor y el respaldo comparten un bloqueo con heartbeat en .server.lock, válido entre contenedores.
 2. En local: `npm run backup`. Opcional BACKUP_DIR apunta a otro disco/directorio fuera de DATA_DIR.
 3. En Docker, con el servicio detenido:
    `docker compose run --rm --no-deps -e BACKUP_DIR=/var/backups -v ./backups:/var/backups rincon node dist-server/scripts/backup.js`
@@ -48,7 +49,7 @@ Es necesario conservar DATA_DIR al actualizar código.
 5. Copiar el respaldo a otra ubicación segura. Reiniciar servidor.
 
 La consistencia requiere detener escrituras; no ejecutar el script contra una instancia que use
-la base sin el mecanismo server.pid del entrypoint oficial.
+la base sin el mecanismo .server.lock del entrypoint oficial. No borrar manualmente un bloqueo activo.
 
 ## Restaurar
 

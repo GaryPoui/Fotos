@@ -1,25 +1,27 @@
 import { DatabaseSync } from "node:sqlite";
-import { cpSync, mkdirSync, existsSync, writeFileSync } from "node:fs";
+import { mkdirSync, existsSync, writeFileSync } from "node:fs";
+import { copyFile } from "node:fs/promises";
 import { join, resolve, sep, basename } from "node:path";
 import { randomUUID } from "node:crypto";
-import { assertStopped } from "./lifecycle.js";
-export function backupData(dataDir: string, backupRoot: string) {
+import { acquireLock } from "./lifecycle.js";
+export async function backupData(dataDir: string, backupRoot: string) {
   const dir = resolve(dataDir),
     root = resolve(backupRoot);
   if (root === dir || root.startsWith(dir + sep))
     throw new Error("El respaldo debe quedar fuera de DATA_DIR.");
-  assertStopped(dir);
   if (!existsSync(join(dir, "rincon.sqlite")))
     throw new Error("Todavía no hay una base de datos para respaldar.");
+  const release = await acquireLock(dir, false);
   const output = join(
     root,
     new Date().toISOString().replace(/[:.]/g, "-") +
       "-" +
       randomUUID().slice(0, 8),
   );
-  mkdirSync(join(output, "media"), { recursive: true });
-  const db = new DatabaseSync(join(dir, "rincon.sqlite"));
+  let db: DatabaseSync | undefined;
   try {
+    mkdirSync(join(output, "media"), { recursive: true });
+    db = new DatabaseSync(join(dir, "rincon.sqlite"));
     const check = db.prepare("PRAGMA quick_check").get() as Record<
       string,
       string
@@ -36,12 +38,12 @@ export function backupData(dataDir: string, backupRoot: string) {
         !/^[a-f0-9-]+\.[a-z0-9]+$/.test(row.filename)
       )
         throw new Error("Nombre de archivo inválido en la base.");
-      cpSync(
+      await copyFile(
         join(dir, "media", row.filename),
         join(output, "media", row.filename),
       );
       if (row.kind === "photo")
-        cpSync(
+        await copyFile(
           join(dir, "media", row.id + ".thumb.webp"),
           join(output, "media", row.id + ".thumb.webp"),
         );
@@ -70,7 +72,8 @@ export function backupData(dataDir: string, backupRoot: string) {
       "Respaldo completo. Conservar de forma privada.\n",
     );
   } finally {
-    db.close();
+    db?.close();
+    await release();
   }
   return output;
 }

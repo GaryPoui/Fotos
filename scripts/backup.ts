@@ -4,7 +4,7 @@ try {
 } catch {
   /* Hosting may provide env directly. */
 }
-const output = backupData(
+const output = await backupData(
   process.env.DATA_DIR || "./data",
   process.env.BACKUP_DIR || "./backups",
 );

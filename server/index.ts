@@ -12,8 +12,7 @@ function mb(name: string, fallback: number) {
     throw new Error(name + " debe ser positivo.");
   return Math.round(value * 1024 * 1024);
 }
-const release = acquireLock(resolve(process.env.DATA_DIR || "./data"));
-process.on("exit", release);
+const release = await acquireLock(resolve(process.env.DATA_DIR || "./data"));
 const runtime = await createApp({
   dataDir: process.env.DATA_DIR || "./data",
   password: process.env.APP_PASSWORD || "",
@@ -29,9 +28,9 @@ const server = runtime.app.listen(port, "0.0.0.0", () =>
 );
 for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () =>
-    server.close(() => {
+    server.close(async () => {
       runtime.close();
-      release();
+      await release();
       process.exit(0);
     }),
   );
