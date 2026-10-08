@@ -20,6 +20,19 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - run: docker build --tag nuestro-rincon:ci .
+      - name: Verify container and persistent volume
+        run: |
+          docker run -d --name rincon-ci -p 127.0.0.1:3002:3001 -v rincon-ci-data:/var/data -e APP_PASSWORD=ci-container-test-password -e APP_ORIGIN=https://rincon.example nuestro-rincon:ci
+          node tests/container-smoke.mjs write
+          docker rm -f rincon-ci
+          docker run -d --name rincon-ci -p 127.0.0.1:3002:3001 -v rincon-ci-data:/var/data -e APP_PASSWORD=ci-container-test-password -e APP_ORIGIN=https://rincon.example nuestro-rincon:ci
+          node tests/container-smoke.mjs read
+      - name: Container logs and cleanup
+        if: always()
+        run: |
+          docker logs rincon-ci || true
+          docker rm -f rincon-ci || true
+          docker volume rm rincon-ci-data || true
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

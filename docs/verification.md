@@ -6,10 +6,16 @@ Fecha: 2026-10-08 (America/Buenos_Aires).
 
 - TypeScript cliente/servidor: PASS.
 - Compilación Vite y servidor: PASS.
-- Vitest: 9 pruebas PASS. Privacidad, acceso, origen, rate limit, firmas, límites, limpieza,
+- Vitest: 11 pruebas PASS. Privacidad, acceso, origen, rate limit, firmas, límites, limpieza,
   CRUD, fechas, sesión/persistencia tras reinicio y revocación por cambio de contraseña.
 - Backup: snapshot íntegro restaurable con medios/escritos, sin sesiones; bloqueo de servidor activo.
-- Browser QA: en ejecución; resultados finales se registran al completar las correcciones.
+- Producción: rechazo de contraseña/origen inseguro, cookies Secure/HttpOnly/SameSite y origen fijo: PASS.
+- Browser QA: 8 recorridos PASS en Chromium, móvil de 390 × 844 y escritorio de 1440 × 1000.
+  Galería: subir/editar/favorito/filtro/línea de tiempo/carrusel/reduced-motion/eliminar/logout.
+  Cartas: crear, leer texto seguro, personalizar y recargar. Audio: reproducción por acción explícita,
+  continuidad entre secciones y pausa. Video WebM: subida, apertura pausada y reproducción.
+- Layout: sin desbordamiento a 360/390 px; botones visibles >=44 × 44 px: PASS.
+- Revisión visual de capturas mobile de galería, escritos y reproductor: PASS.
 
 ## Pendiente externo
 
