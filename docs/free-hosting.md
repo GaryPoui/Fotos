@@ -75,10 +75,19 @@ locales; no puede retirar bytes ya descargados ni invalidar tokens copiados por 
   No permite sobrescribir un objeto.
 - Las firmas se comprueban en el navegador y las imágenes se decodifican allí. Esto no es
   validación de firma del lado del servidor ni antivirus; la carga se limita a la pareja autorizada.
-- Primero reserva/sube, luego escribe metadatos. Si falla la subida se intenta compensar;
-  si falla la limpieza se conserva el cupo para evitar excederlo.
-- Si falla la respuesta al guardar metadatos, se conserva archivo/reserva: podría haberse guardado.
-  El reintento dentro del mismo formulario usa el mismo ID y consulta Firestore antes de limpiar.
+- Primero reserva/sube por TUS, luego escribe metadatos. La reserva y el ID permanecen
+  estables para retomar fragmentos y reconocer archivos ya completados, sin sobrescribir.
+- La cola pendiente y el formulario se conservan temporalmente en el dispositivo mediante
+  IndexedDB. Pausar o cerrar el formulario conserva la tanda; al completar/quitar/cerrar sesión
+  se elimina la copia local. Quien use ese dispositivo podría acceder a estos temporales.
+- TUS usa fragmentos de 6 MiB y renueva el JWT para cada petición. La URL de reanudación dura
+  hasta 24 horas; después puede reiniciar el archivo con el mismo ID/reserva. No almacena tokens
+  en las referencias TUS. Web Locks evita subir la misma tanda desde dos pestañas.
+- Al quitar/cerrar sesión se intenta eliminar archivos incompletos y liberar cuota. Si no hay
+  conexión, puede requerir limpieza administrativa. Expirar una sesión borra temporales locales;
+  no garantiza liberación remota sin credenciales válidas.
+- Si falla la respuesta al guardar metadatos, conserva archivo/reserva y consulta Firestore
+  al reintentar. Un éxito previo no genera duplicados. En local se usa también un ID estable.
 - No hay transacción atómica entre proveedores. Si se cierra el navegador a mitad de subida,
   revisar reservas huérfanas antes de liberar espacio. Nunca borrar una reserva con objetos existentes.
 - Sin migración automática de SQLite ni recuerdos locales.
@@ -91,9 +100,29 @@ proyecto por inactividad y tiene cuotas de tráfico/almacenamiento. No habilitar
 Una tarjeta o facturación habilitada cambia el alcance del presupuesto cero.
 
 El comando `npm run backup` sigue siendo exclusivamente para SQLite local.
-Para cloud, antes de operar con recuerdos reales, conservar copias propias de los originales.
-Para un respaldo completo: detener temporalmente el uso de la pareja, exportar las tres colecciones
-Firestore mediante cliente autorizado y descargar los objetos privados y reservas de Supabase con
-herramientas administrativas del usuario. Guardar todo cifrado o en disco privado; comprobar conteo,
-tamaños y hashes antes de considerarlo completo. No se implementó restauración cloud automática.
+Desde **Personalizar nuestro rincón → Descargar una copia de nuestros recuerdos** se puede
+exportar la modalidad actual (cloud o local): originales, miniaturas, cartas TXT, ajustes y JSON
+con metadatos y hashes SHA-256. La descarga se divide en partes de aproximadamente 100 MB;
+un original local mayor que ese tamaño ocupa su propia parte. Todas las partes comparten un
+snapshot de metadatos. Evitar editar/borrar recuerdos durante el respaldo; archivos faltantes
+cancelan esa parte con un error. Comprobar que todos los ZIP se guardaron y se pueden abrir.
+No incluye credenciales ni sesiones. Los ZIP contienen contenido privado sin cifrar: guardarlos
+fuera de lugares compartidos. No hay restauración automática, pero textos y archivos se abren
+sin la web. Para reconstrucción administrativa, usar JSON y hashes con las herramientas del usuario.
 Los planes gratuitos no sustituyen un respaldo propio ni garantizan disponibilidad continua.
+
+## Portada, fechas y fotos de iPhone
+
+- Personalizar permite elegir una foto de portada y un recuerdo destacado; la alternativa
+  automática usa favorito o más reciente. La portada usa miniatura para ahorrar datos y abre
+  el original al tocarla. El contador requiere configurar **Juntos desde**.
+- **Un día como hoy** muestra el mismo mes/día de años anteriores, según la fecha del dispositivo.
+  Álbumes se construyen con el campo existente: Viajes, Salidas y Aniversarios son sugerencias
+  al subir; se puede escribir cualquier nombre. No se crean álbumes vacíos ni fechas ficticias.
+- HEIC/HEIF se convierte en el dispositivo mediante heic-to, en un worker local. Sólo se transmite
+  el JPEG resultante, a calidad .9; se conserva la primera imagen, sin Live Photo/movimiento y
+  sin preservar todos los metadatos del original. Conservar el HEIC propio. Hasta 20 MB/32 MP;
+  si falla, la interfaz permite exportar JPEG desde Fotos y reintentar.
+- El decodificador se carga sólo al necesitar HEIC. CSP mantiene scripts propios sin unsafe-eval;
+  permite workers blob locales para esta conversión. Créditos/licencias en `/third-party-notices.txt`.
+- Chromium móvil/escritorio y HEIC real verificados; Safari/iPhone físico sigue sin verificarse.

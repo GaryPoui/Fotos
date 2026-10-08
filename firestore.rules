@@ -33,7 +33,9 @@ service cloud.firestore {
     && text(d.author,0,100) && date(d.date) && d.favorite is bool && d.createdAt is timestamp;
   }
   function isValidSettings(d) {
-   return d.keys().hasAll(['names','title','since']) && d.keys().hasOnly(['names','title','since'])
+   return d.keys().hasAll(['names','title','since']) && d.keys().hasOnly(['names','title','since','coverId','featuredId'])
+    && (!('coverId' in d) || (d.coverId is string && (d.coverId == '' || d.coverId.matches('^[a-f0-9-]{36}$'))))
+    && (!('featuredId' in d) || (d.featuredId is string && (d.featuredId == '' || d.featuredId.matches('^[a-f0-9-]{36}$'))))
     && text(d.names,1,100) && text(d.title,1,80) && (d.since == '' || date(d.since));
   }
   match /rincon_media/{id} {

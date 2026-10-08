@@ -25,6 +25,8 @@ export interface Note {
 export interface Settings {
   names: string;
   since: string;
+  coverId?: string;
+  featuredId?: string;
   title: string;
 }
 export interface Library {

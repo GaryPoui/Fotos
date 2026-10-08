@@ -49,6 +49,34 @@ ni publicación HTTPS; las tareas pendientes de spec 007 siguen pendientes.
 - Código/documentación de esta alternativa: spec 008. Respaldo cloud y límites de
   cuotas/disponibilidad/sesión documentados en [free-hosting.md](free-hosting.md).
 
+## Mejoras 1–5 / spec 009 (2026-10-08)
+
+- Publicadas por bloques: respaldo ZIP, reanudación/cola, HEIC y portada/fechas/álbumes.
+  Se conservaron contraseña, acertijos y mecanismo de acceso.
+- `npm test`: **24 PASS**, 5 de emulador omitidas en esa ejecución.
+  `npm run test:rules`: **5 PASS**, incluyendo ajustes de portada, campos inválidos y permisos.
+- `npm run build` y `npm run build:cloud`: PASS; `npx playwright test`: **18/18 PASS**
+  móvil/escritorio. Tras el aviso de tandas pendientes y el ajuste de portada liviana,
+  una pasada enfocada adicional dio **6/6 PASS**, incluyendo limpieza de archivos temporales
+  y referencias TUS al cerrar sesión (20 recorridos distintos comprobados en total).
+  Incluye ZIP extraído, originales/miniaturas/metadatos, respuesta de subida
+  perdida con archivo ya guardado, cola recuperada tras reload sin duplicados, HEIC real,
+  selección persistente de portada/destacado, contador, fecha histórica y álbumes.
+- `node scripts/smoke-resume.mjs https://fotosconailu.web.app`: PASS. WAV sintético 7 MiB,
+  interrupción tras primer fragmento 6 MiB, recarga, HEAD con Upload-Offset **6291456**,
+  reanudación, confirmación y eliminación. Reserva/ID estable, sin volver al byte cero.
+- `node scripts/smoke-heic.mjs https://fotosconailu.web.app`: PASS bajo CSP pública. Fixture
+  técnico HEIC de libheif convertido en dispositivo, JPEG privado y recarga; eliminado.
+- `node scripts/smoke-home.mjs https://fotosconailu.web.app`: PASS. Ajustes de portada/destacado
+  realmente persistidos en Firestore, recuerdo de hace cuatro años y navegación por álbum.
+  ZIP cloud descargado y abierto con original, miniatura y metadatos. Se restauraron las
+  selecciones previas de portada; nombres y fecha de la pareja no se modificaron. Sólo se
+  eliminaron la foto/álbum sintéticos propios.
+- Captura móvil de portada revisada: `test-results/personal-cover-mobile.png`.
+  Sin desbordamiento y controles táctiles >=44 px, teclado y vistas anteriores conservados.
+- Reglas Firestore y Hosting publicados juntos. Sin cambios SQL, bucket público, proveedores
+  adicionales, planes o facturación. Limitaciones y uso en [free-hosting.md](free-hosting.md).
+
 ## Verificación histórica de la modalidad Node/SQLite
 
 - TypeScript cliente/servidor: PASS.

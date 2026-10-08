@@ -57,6 +57,8 @@ const settingsInput = z
     names: z.string().trim().min(1).max(100),
     title: z.string().trim().min(1).max(80),
     since: z.union([date, z.literal("")]),
+    coverId: z.union([z.string().uuid(),z.literal("")]).optional(),
+    featuredId: z.union([z.string().uuid(),z.literal("")]).optional(),
   })
   .strict();
 class ApiError extends Error {
