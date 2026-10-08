@@ -39,7 +39,7 @@ export function Music({
             <br />
             son un abrazo.
           </h3>
-          <p>La música sigue con vos mientras recorrés nuestro rincón.</p>
+          <p>La música acompaña a Ailu y Tomy en nuestro rincón.</p>
         </div>
       </div>
       {!!tracks.length && (

@@ -186,7 +186,7 @@ export default function App() {
                     <>
                       Hay canciones
                       <br />
-                      <em>que suenan a vos.</em>
+                      <em>que suenan a Ailu.</em>
                     </>
                   ) : (
                     <>
@@ -207,11 +207,11 @@ export default function App() {
               <div className="intro-art" aria-hidden="true">
                 <div className="paper sky">
                   <Cloud />
-                  <span>vos</span>
+                  <span>Ailu</span>
                 </div>
                 <div className="paper blush">
                   <Heart />
-                  <span>yo</span>
+                  <span>Tomy</span>
                 </div>
                 <span className="art-spark">✧</span>
               </div>
@@ -222,8 +222,8 @@ export default function App() {
                   {page === "memories"
                     ? "Nuestro pequeño álbum"
                     : page === "music"
-                      ? "En repeat, con vos"
-                      : "De mí, para vos"}
+                      ? "En repeat, con Ailu"
+                      : "De Tomy, para Ailu"}
                 </span>
                 <h2>
                   {page === "memories"
@@ -394,7 +394,7 @@ function Login({
         </span>
         <span className="eyebrow">Un espacio sólo nuestro</span>
         <h1>
-          Vos, yo y<br />
+          Ailu, Tomy y<br />
           <em>todo lo vivido.</em>
         </h1>
         <p>
@@ -407,12 +407,22 @@ function Login({
             id="password"
             type="password"
             autoComplete="current-password"
+            aria-describedby="password-hints"
             required
             value={password}
             maxLength={256}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="La llave de nuestros recuerdos"
           />
+          <div className="password-hints" id="password-hints">
+            <strong>Las pistas de nuestra llave</strong>
+            <p>Escribila toda de corrido, en minúsculas y sin espacios.</p>
+            <ol>
+              <li>Los primeros dígitos son un número muy importante para los dos y de un pilotito que se parece un poquito a mí.</li>
+              <li>La segunda palabra es el lugar donde nos conocimos y nos comimos.</li>
+              <li>La tercera es mi forma favorita de llamarte, es de tu color favorito y, si mirás para arriba, lo ves.</li>
+            </ol>
+          </div>
           {error && (
             <p className="form-error" role="alert">
               {error}
@@ -433,7 +443,7 @@ function Login({
         </small>
       </section>
       <span className="login-bottom">
-        nuestro rincón · hecho de vos y de mí
+        nuestro rincón · hecho de Ailu y Tomy
       </span>
     </div>
   );

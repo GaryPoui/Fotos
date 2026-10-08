@@ -17,3 +17,6 @@ T001 primero; tareas en orden. 001 → 002 → 003; 004/005 dependen de 001/002;
 Lectura y revisión independientes; archivos compartidos secuenciales.
 ## Implementation Strategy
 Entregas incrementales con validación, commit/push y converge.
+
+## Personalización del acceso
+- [X] T007 [US1] Agregar las tres pistas de acceso, instrucciones de escritura y nombres Ailu/Tomy en la interfaz; actualizar contraseña local fuera de Git y nombres guardados. Verificado acceso real, pistas visibles y ausencia de desbordamiento a 360 px, además de compilación y tipos.

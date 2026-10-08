@@ -285,7 +285,7 @@ export async function createApp(options: AppOptions) {
       .get() as { value: string } | undefined;
     return row
       ? JSON.parse(row.value)
-      : { names: "Vos y yo", title: "Nuestro rincón", since: "" };
+      : { names: "Ailu y Tomy", title: "Nuestro rincón", since: "" };
   };
   const mediaRows = () =>
     (

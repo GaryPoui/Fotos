@@ -28,6 +28,7 @@ Biblioteca vacía, contenido eliminado, sesión expirada, archivo inválido, pan
 - **FR-002**: Rechazar intentos excesivos de acceso y solicitudes de modificación de otro origen.
 - **FR-003**: Presentar interfaz en español, mobile first desde 360 px, celeste y rosado, con controles de 44 px.
 - **FR-004**: Mostrar estados de carga, vacío y error sin exponer detalles internos.
+- **FR-005**: Personalizar los textos de la interfaz con Ailu y Tomy. Debajo de la contraseña, mostrar las tres pistas indicadas por Tomy (número y piloto, lugar donde se conocieron y apodo favorito), explicando que se escribe toda seguida, en minúsculas y sin espacios. La contraseña configurada permanece fuera de Git.
 
 ### Key Entities
 Session: token opaco, expiración; Settings: nombres, fecha de inicio, título.

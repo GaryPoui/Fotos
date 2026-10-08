@@ -1503,6 +1503,27 @@ input[type="range"] {
   background: #ffffffc9;
   font-size: 13px;
 }
+.password-hints {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eaf5fc, #fbeef5);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.password-hints strong {
+  color: var(--ink);
+}
+.password-hints p {
+  margin: 6px 0 10px;
+}
+.password-hints ol {
+  margin: 0;
+  padding-left: 20px;
+}
+.password-hints li + li {
+  margin-top: 8px;
+}
 .login-card .button {
   font-size: 12px;
   margin-top: 7px;

@@ -150,7 +150,7 @@ export function Notes({
               </button>
               <div className="note-footer">
                 <span>
-                  {note.author || "De mí, para vos"}
+                  {note.author || "De Tomy, para Ailu"}
                   <small>{formatDate(note.date)}</small>
                 </span>
                 <button
@@ -179,7 +179,7 @@ export function Notes({
         <Dialog
           title={
             current.type === "letter"
-              ? "Una carta para vos"
+              ? "Una carta para Ailu"
               : "Palabras nuestras"
           }
           onClose={() => setReading(null)}

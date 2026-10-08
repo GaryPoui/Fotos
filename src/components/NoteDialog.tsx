@@ -21,7 +21,7 @@ export function NoteDialog({
     [busy, setBusy] = useState(false);
   return (
     <Dialog
-      title={note ? "Volver a nuestras palabras" : "Dejá un pedacito de vos"}
+      title={note ? "Volver a nuestras palabras" : "Un pedacito de Ailu y Tomy"}
       onClose={onClose}
       busy={busy}
     >
