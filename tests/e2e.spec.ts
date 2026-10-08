@@ -323,3 +323,23 @@ test('private backup downloads original, thumbnail and readable metadata', async
  expect(files['archivos/'+photo.id+'/miniatura.webp'].length).toBeGreaterThan(0);
  await expect(page.getByText('Todas las partes están preparadas.',{exact:false})).toBeVisible();await assertFits(page);
 });
+
+test('interrupted upload restores its draft after reload without duplicating a committed file',async({page},info)=>{
+ await login(page);const title='Retomar '+info.project.name;
+ await page.route('**/api/media',async route=>{if(route.request().method()==='POST'){await route.fetch();await route.abort('internetdisconnected');}else await route.continue();},{times:1});
+ await page.getByRole('button',{name:'Subir recuerdos',exact:true}).click();
+ await page.getByLabel('Fotos y videos',{exact:true}).setInputFiles({name:'cielo.png',mimeType:'image/png',buffer:png});
+ await page.getByLabel('Título',{exact:true}).fill(title);
+ await page.getByRole('button',{name:'Guardar en nuestro rincón'}).click();
+ await expect(page.getByRole('alert')).toContainText('Algunos archivos');
+ await page.reload();await page.getByRole('heading',{name:/Nuestros momentos/}).waitFor();
+ await page.getByRole('button',{name:'Subir recuerdos',exact:true}).click();
+ await expect(page.getByText('Recuperamos tu tanda pendiente.',{exact:false})).toBeVisible();
+ await expect(page.getByLabel('Título',{exact:true})).toHaveValue(title);
+ await page.getByRole('button',{name:'Guardar en nuestro rincón'}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ const library=await (await page.request.get('/api/library')).json();
+ expect(library.media.filter((m:{title:string})=>m.title===title)).toHaveLength(1);
+ await page.getByRole('button',{name:'Subir recuerdos',exact:true}).click();
+ await expect(page.getByText('Recuperamos tu tanda pendiente.',{exact:false})).toHaveCount(0);
+});

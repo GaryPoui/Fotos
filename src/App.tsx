@@ -23,6 +23,7 @@ import { Player } from "./components/Player";
 import { Notes } from "./components/Notes";
 import { NoteDialog } from "./components/NoteDialog";
 import { Dialog } from "./components/Dialog";
+import { clearUploads, discardPendingUploads } from "./upload-queue";
 import { BackupDialog } from "./components/BackupDialog";
 type Page = "memories" | "music" | "words";
 export default function App() {
@@ -59,6 +60,7 @@ export default function App() {
   }, [authenticated, refresh]);
   useEffect(() => {
     const handler = () => {
+      void clearUploads().catch(() => {});
       setAuthenticated(false);
       setLibrary(null);
       setSelectedTrack(null);
@@ -141,7 +143,9 @@ export default function App() {
             aria-label="Cerrar sesión"
             onClick={async () => {
               try {
+                const cleaned = await discardPendingUploads();
                 await api("/logout", "POST");
+                if(!cleaned)setError("La sesión se cerró. No pudimos liberar todo el espacio de las subidas pendientes; revisá el almacenamiento cuando vuelva la conexión.");
                 setAuthenticated(false);
                 setLibrary(null);
                 setSelectedTrack(null);

@@ -52,11 +52,19 @@ export function upload(
   file: File,
   fields: Record<string, string>,
   progress: (n: number) => void,
+  options: { id?: string; signal?: AbortSignal } = {},
 ): Promise<void> {
-  if (cloudEnabled) return import("./cloud/client").then(module => module.cloudUpload(file, fields, progress));
+  if (cloudEnabled) return import("./cloud/client").then(module => module.cloudUpload(file, fields, progress, options));
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/media");
+    if (options.id) xhr.setRequestHeader("X-Upload-Id", options.id);
+    xhr.timeout = 120000;
+    const abort = () => xhr.abort();
+    options.signal?.addEventListener("abort", abort, { once: true });
+    xhr.onloadend = () => options.signal?.removeEventListener("abort", abort);
+    xhr.onabort = () => reject(new DOMException("Subida pausada", "AbortError"));
+    xhr.ontimeout = () => reject(new Error("La conexión tardó demasiado. Podés reintentar."));
     xhr.setRequestHeader("X-Requested-With", "NuestroRincon");
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable)
@@ -81,6 +89,7 @@ export function upload(
     const data = new FormData();
     data.append("file", file);
     for (const [key, value] of Object.entries(fields)) data.append(key, value);
+    if (options.signal?.aborted) { reject(new DOMException("Subida pausada", "AbortError")); return; }
     xhr.send(data);
   });
 }

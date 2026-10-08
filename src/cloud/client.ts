@@ -169,50 +169,74 @@ export async function cloudApi<T>(path: string, method: string, body?: unknown):
     throw error;
   }
 }
-function put(path: string, blob: Blob, mime: string, token: string, progress: (n: number) => void) {
-  return new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', storageUrl + '/storage/v1/object/' + bucket + '/' + path);
-    xhr.timeout = 120000;
-    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-    xhr.setRequestHeader('apikey', storageKey);
-    xhr.setRequestHeader('Content-Type', mime);
-    xhr.setRequestHeader('Cache-Control', 'no-store');
-    xhr.upload.onprogress = e => { if (e.lengthComputable) progress(Math.round(e.loaded / e.total * 90)); };
-    xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('No pudimos subir el archivo. Revisá el espacio disponible y volvé a intentar.'));
-    xhr.onerror = xhr.ontimeout = () => reject(new Error('Se cortó la subida. Volvé a intentar.'));
-    xhr.send(blob);
+async function putResumable(path: string, blob: Blob, mime: string, progress: (n: number) => void, signal?: AbortSignal) {
+  const { Upload } = await import('tus-js-client');
+  signal?.throwIfAborted();
+  await new Promise<void>((resolve, reject) => {
+    const stop = () => { void task.abort().then(() => reject(new DOMException('Subida pausada', 'AbortError')), reject); };
+    const finish = (error?: Error) => { signal?.removeEventListener('abort', stop); error ? reject(error) : resolve(); };
+    const task = new Upload(blob, {
+      endpoint: storageUrl + '/storage/v1/upload/resumable',
+      chunkSize: 6 * 1024 * 1024,
+      uploadDataDuringCreation: true,
+      retryDelays: [0, 1000, 3000, 5000],
+      removeFingerprintOnSuccess: true,
+      fingerprint: async () => 'rincon-' + storageUrl + '/' + path,
+      metadata: { bucketName: bucket, objectName: path, contentType: mime, cacheControl: '0' },
+      onBeforeRequest: async request => {
+        const user = await member();
+        request.setHeader('Authorization', 'Bearer ' + await user.getIdToken());
+        request.setHeader('apikey', storageKey);
+      },
+      onProgress: (done,total) => progress(total ? Math.min(90,Math.round(done/total*90)) : 0),
+      onError: () => finish(new Error('No pudimos terminar la subida. La tanda queda pendiente para retomarla.')),
+      onSuccess: () => finish(),
+    });
+    signal?.addEventListener('abort', stop, {once:true});
+    task.findPreviousUploads().then(previous => {
+      if(signal?.aborted) { finish(new DOMException('Subida pausada','AbortError')); return; }
+      if(previous[0]) task.resumeFromPreviousUpload(previous[0]);
+      task.start();
+    }).catch(error => finish(error));
   });
 }
-export async function cloudUpload(file: File, fields: Record<string, string>, progress: (n: number) => void) {
-  const user = await member();
+export async function cloudDiscard(file:File,id:string) {
+  await member();
+  if ((await getDocFromServer(ref('media',id))).exists()) return;
+  if(!store)throw missingStorage();
+  const pending=await store.from('rincon_reservations').select('ext,thumbnail_bytes').eq('id',id).maybeSingle();
+  if(pending.error)throw new Error('No pudimos consultar el pendiente.');
+  if(!pending.data)return;
+  const detected={ext:pending.data.ext,kind:Number(pending.data.thumbnail_bytes)>0?'photo':'audio'};
+  await cleanup(id,detected.ext,detected.kind==='photo');
+}
+export async function cloudUpload(file: File, fields: Record<string, string>, progress: (n: number) => void, options: { id?: string; signal?: AbortSignal } = {}) {
+  await member();
   if (!store) throw missingStorage();
   if (!file.size || file.size > maxFile) throw new Error('El archivo supera el límite de 50 MB o está vacío.');
   const data = mediaInput.parse({ ...fields, tags: JSON.parse(fields.tags || '[]') });
   const detected = await inspect(file);
   const thumb = detected.kind === 'photo' ? await thumbnail(file) : null;
-  const previousId = uploadIds.get(file);
-  const id = previousId || crypto.randomUUID();
-  uploadIds.set(file, id);
-  // A lost network response can follow a successful Firestore commit. Reuse the ID.
+  const id = options.id || uploadIds.get(file) || crypto.randomUUID();
+  if(!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id)) throw new Error('Identificador de subida inválido.');
+  uploadIds.set(file,id);
   if ((await getDocFromServer(ref('media', id))).exists()) { progress(100); return; }
-  if (previousId) await cleanup(id, detected.ext, Boolean(thumb));
-  const reservation = await store.rpc('rincon_reserve', { asset_id: id, original_bytes: file.size, thumbnail_bytes: thumb?.size || 0, extension: detected.ext, content_mime: detected.mime });
-  if (reservation.error) throw new Error('No pudimos reservar espacio. El álbum puede estar lleno o sin conexión.');
-  let committed = false;
-  let metadataAttempted = false;
-  try {
-    const token = await user.getIdToken();
-    await put(id + '/original.' + detected.ext, file, detected.mime, token, progress);
-    if (thumb) await put(id + '/thumb.webp', thumb, 'image/webp', token, () => progress(95));
-    metadataAttempted = true;
-    await setDoc(ref('media', id), { ...data, id, kind: detected.kind, mime: detected.mime, size: file.size, ext: detected.ext, storedBytes: file.size + (thumb?.size || 0), createdAt: serverTimestamp() });
-    committed = true;
-    progress(100);
-  } finally {
-    if (!committed && !metadataAttempted) {
-      try { await cleanup(id, detected.ext, Boolean(thumb)); }
-      catch { console.warn('Una subida incompleta conserva su reserva. Revisar el álbum antes de liberar espacio.'); }
-    }
+  options.signal?.throwIfAborted();
+  // Preserve the same reservation and TUS object URL across interruptions/reloads.
+  const previous = await store.from('rincon_reservations').select('original_bytes,thumbnail_bytes,ext,mime').eq('id',id).maybeSingle();
+  if(previous.error) throw new Error('No pudimos consultar la subida pendiente. Revisá tu conexión.');
+  if(previous.data) {
+    if(Number(previous.data.original_bytes)!==file.size || Number(previous.data.thumbnail_bytes)!==(thumb?.size||0) || previous.data.ext!==detected.ext || previous.data.mime!==detected.mime) throw new Error('El archivo no coincide con la tanda pendiente. Quitalo y volvé a seleccionarlo.');
+  } else {
+    const reservation = await store.rpc('rincon_reserve', { asset_id: id, original_bytes: file.size, thumbnail_bytes: thumb?.size || 0, extension: detected.ext, content_mime: detected.mime });
+    if (reservation.error) throw new Error('No pudimos reservar espacio. El álbum puede estar lleno o sin conexión.');
   }
+  const existing=await store.storage.from(bucket).list(id);
+  if(existing.error) throw new Error('No pudimos consultar los archivos pendientes.');
+  const has=(name:string)=>existing.data.some(item=>item.name===name);
+  if(!has('original.'+detected.ext)) await putResumable(id+'/original.'+detected.ext,file,detected.mime,progress,options.signal);
+  if(thumb&&!has('thumb.webp')) await putResumable(id+'/thumb.webp',thumb,'image/webp',()=>progress(95),options.signal);
+  options.signal?.throwIfAborted();
+  await setDoc(ref('media', id), { ...data, id, kind: detected.kind, mime: detected.mime, size: file.size, ext: detected.ext, storedBytes: file.size + (thumb?.size || 0), createdAt: serverTimestamp() });
+  progress(100);
 }

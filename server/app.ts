@@ -326,12 +326,21 @@ export async function createApp(options: AppOptions) {
       fieldSize: 4096,
     },
   }).single("file");
+  const activeUploads = new Set<string>();
   app.post("/api/media", upload, async (req, res) => {
     if (!req.file) throw new ApiError(400, "Elegí un archivo.");
     const tempPath = req.file.path;
     let target = "",
       thumb = "";
+    let ownedUploadId = "";
     try {
+      const suppliedId = req.get("X-Upload-Id");
+      if (suppliedId && !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(suppliedId)) throw new ApiError(400, "Identificador de subida inválido.");
+      const uploadId = suppliedId || randomUUID();
+      const existing = db.prepare("SELECT * FROM media WHERE id=?").get(uploadId);
+      if (existing) { res.status(200).json(publicMedia(existing as unknown as MediaRow)); return; }
+      if (activeUploads.has(uploadId)) throw new ApiError(409, "Esta subida ya está en curso. Esperá y reintentá.");
+      activeUploads.add(uploadId); ownedUploadId=uploadId;
       const input = mediaInput.parse({
         title:
           req.body.title ||
@@ -355,7 +364,7 @@ export async function createApp(options: AppOptions) {
           413,
           "El espacio está lleno. Borrá algún archivo o ampliá el almacenamiento.",
         );
-      const id = randomUUID(),
+      const id = uploadId,
         filename = id + "." + detected.ext;
       if (detected.kind === "photo") {
         thumb = join(mediaDir, id + ".thumb.webp");
@@ -400,6 +409,7 @@ export async function createApp(options: AppOptions) {
           ),
         );
     } finally {
+      if (ownedUploadId) activeUploads.delete(ownedUploadId);
       for (const path of [tempPath, target, thumb])
         if (path && existsSync(path)) unlinkSync(path);
     }
