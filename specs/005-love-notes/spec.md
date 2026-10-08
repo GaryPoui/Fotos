@@ -45,5 +45,3 @@ Note: id, type quote/letter, title, body, author, date, favorite, createdAt.
 - Se usa disco persistente; no hay transcodificación ni sincronización offline.
 - La publicación online necesita un proveedor y contraseña definidos fuera de Git.
 - Los datos de ejemplo no se presentarán como recuerdos reales.
-
-

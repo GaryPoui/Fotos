@@ -17,4 +17,3 @@ T001 primero; tareas en orden. 001 → 002 → 003; 004/005 dependen de 001/002;
 Lectura y revisión independientes; archivos compartidos secuenciales.
 ## Implementation Strategy
 Entregas incrementales con validación, commit/push y converge.
-
