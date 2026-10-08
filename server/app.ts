@@ -69,6 +69,7 @@ export async function createApp(options: AppOptions) {
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
   app.get('/api/session', (req, res) => res.json({ authenticated: Boolean(authenticated(req)) }));
   const attempts = new Map<string, { count: number; until: number }>();
+  let hashing = false;
   app.post('/api/login', async (req, res) => {
     const ip = req.ip || 'unknown', now = Date.now();
     for (const [key, val] of attempts) if (val.until < now) attempts.delete(key);
@@ -76,7 +77,11 @@ export async function createApp(options: AppOptions) {
     if (previous && previous.count >= 8) throw new ApiError(429, 'Demasiados intentos. Volvé a probar en 15 minutos.');
     attempts.set(ip, { count: (previous?.count || 0) + 1, until: previous?.until || now + 15 * 60_000 });
     const input = z.object({ password: z.string().min(1).max(256) }).parse(req.body);
-    const candidate = await new Promise<Buffer>((res, rej) => scryptCallback(input.password, salt!, 64, { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 }, (err, key) => err ? rej(err) : res(key)));
+    if (hashing) throw new ApiError(429, 'Estamos verificando otro acceso. Volvé a intentar en unos segundos.');
+    hashing = true;
+    let candidate: Buffer;
+    try { candidate = await new Promise<Buffer>((res, rej) => scryptCallback(input.password, salt!, 64, { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 }, (err, key) => err ? rej(err) : res(key))); }
+    finally { hashing = false; }
     if (!timingSafeEqual(candidate, passwordHash)) throw new ApiError(401, 'La contraseña no coincide. Probá de nuevo.');
     attempts.delete(ip);
     const old = tokenOf(req); if (old) db.prepare('DELETE FROM sessions WHERE token=?').run(hash(old));
