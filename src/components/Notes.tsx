@@ -1,17 +1,219 @@
-import { useState } from 'react';
-import { Search, Heart, Mail, Quote, Pencil, Trash2, ArrowUpRight } from 'lucide-react';
-import type { Note } from '../../shared/types';
-import { api, formatDate } from '../lib';
-import { Confirm, Dialog } from './Dialog';
-export function Notes({ notes, onNew, onEdit, onChanged, onError }: { notes: Note[]; onNew: () => void; onEdit: (n: Note) => void; onChanged: (m: string) => Promise<void>; onError: (e: string) => void }) {
-  const [type, setType] = useState('all'), [query, setQuery] = useState(''), [favorites, setFavorites] = useState(false), [reading, setReading] = useState<string | null>(null), [deleting, setDeleting] = useState<Note | null>(null);
-  const filtered = notes.filter(n => (type === 'all' || n.type === type) && (!favorites || n.favorite) && (n.title + ' ' + n.body + ' ' + n.author).toLowerCase().includes(query.toLowerCase()));
-  const current = notes.find(n => n.id === reading);
-  const favorite = async (note: Note) => { try { await api('/notes/' + note.id, 'PATCH', { favorite: !note.favorite }); await onChanged(note.favorite ? 'Quitado de favoritos.' : 'Palabras para guardar cerquita.'); } catch (e) { onError((e as Error).message); } };
-  return <><div className="searchbox"><Search size={18} /><input aria-label="Buscar frases y cartas" placeholder="Buscar entre nuestras palabras…" value={query} onChange={e => setQuery(e.target.value)} /></div><div className="gallery-options"><div className="view-switch">{[{ value: 'all', text: 'Todo' }, { value: 'quote', text: 'Frases' }, { value: 'letter', text: 'Cartas' }].map(t => <button key={t.value} className={type === t.value ? 'active' : ''} aria-pressed={type === t.value} onClick={() => setType(t.value)}>{t.text}</button>)}</div><button className={'favorites-filter ' + (favorites ? 'selected' : '')} aria-pressed={favorites} onClick={() => setFavorites(!favorites)}><Heart size={16} /><span>Favoritos</span></button></div>
-    {!notes.length ? <div className="empty-state"><div className="letter-art" aria-hidden="true"><Mail size={64} /><Heart size={24} /></div><h3>Hay cosas que merecen<br />quedar escritas.</h3><p>Una carta larga, una frase pequeña.<br />Lo importante es que sea nuestra.</p><button className="button secondary" onClick={onNew}>Escribir nuestras primeras palabras</button></div> : <div className="notes-grid">{filtered.map(note => <article key={note.id} className={'note-card ' + note.type}><div className="note-top"><span>{note.type === 'quote' ? <><Quote size={16} /> Una frase</> : <><Mail size={16} /> Una carta</>}</span><button className={'icon-button ' + (note.favorite ? 'is-favorite' : '')} aria-label={'Favorito: ' + note.title} aria-pressed={note.favorite} onClick={() => void favorite(note)}><Heart size={18} fill={note.favorite ? 'currentColor' : 'none'} /></button></div><button className="note-body-button" onClick={() => setReading(note.id)}><h3>{note.title}</h3><p>{note.body}</p><span className="read-note">Leer {note.type === 'letter' ? 'carta' : 'frase'} <ArrowUpRight size={16} /></span></button><div className="note-footer"><span>{note.author || 'De mí, para vos'}<small>{formatDate(note.date)}</small></span><button className="icon-button" aria-label={'Editar ' + note.title} onClick={() => onEdit(note)}><Pencil size={16} /></button><button className="icon-button" aria-label={'Eliminar ' + note.title} onClick={() => setDeleting(note)}><Trash2 size={16} /></button></div></article>)}{!filtered.length && <p className="muted">No encontramos escritos con esos filtros.</p>}</div>}
-    {current && <Dialog title={current.type === 'letter' ? 'Una carta para vos' : 'Palabras nuestras'} onClose={() => setReading(null)} wide><article className="note-reader"><span className="eyebrow">{formatDate(current.date, true)}</span><h2>{current.title}</h2><div>{current.body}</div><p className="signature">{current.author || 'Con amor'}</p><Heart size={20} /></article></Dialog>}
-    {deleting && <Confirm title="¿Eliminar estas palabras?" body={'“' + deleting.title + '” se eliminará. Esta acción no se puede deshacer.'} onClose={() => setDeleting(null)} onConfirm={async () => { try { await api('/notes/' + deleting.id, 'DELETE'); setDeleting(null); await onChanged('Escrito eliminado.'); } catch (e) { onError((e as Error).message); } }} />}
-  </>;
+import { useState } from "react";
+import {
+  Search,
+  Heart,
+  Mail,
+  Quote,
+  Pencil,
+  Trash2,
+  ArrowUpRight,
+} from "lucide-react";
+import type { Note } from "../../shared/types";
+import { api, formatDate } from "../lib";
+import { Confirm, Dialog } from "./Dialog";
+export function Notes({
+  notes,
+  onNew,
+  onEdit,
+  onChanged,
+  onError,
+}: {
+  notes: Note[];
+  onNew: () => void;
+  onEdit: (n: Note) => void;
+  onChanged: (m: string) => Promise<void>;
+  onError: (e: string) => void;
+}) {
+  const [type, setType] = useState("all"),
+    [query, setQuery] = useState(""),
+    [favorites, setFavorites] = useState(false),
+    [reading, setReading] = useState<string | null>(null),
+    [deleting, setDeleting] = useState<Note | null>(null);
+  const filtered = notes.filter(
+    (n) =>
+      (type === "all" || n.type === type) &&
+      (!favorites || n.favorite) &&
+      (n.title + " " + n.body + " " + n.author)
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
+  const current = notes.find((n) => n.id === reading);
+  const favorite = async (note: Note) => {
+    try {
+      await api("/notes/" + note.id, "PATCH", { favorite: !note.favorite });
+      await onChanged(
+        note.favorite
+          ? "Quitado de favoritos."
+          : "Palabras para guardar cerquita.",
+      );
+    } catch (e) {
+      onError((e as Error).message);
+    }
+  };
+  return (
+    <>
+      <div className="searchbox">
+        <Search size={18} />
+        <input
+          aria-label="Buscar frases y cartas"
+          placeholder="Buscar entre nuestras palabras…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      <div className="gallery-options">
+        <div className="view-switch">
+          {[
+            { value: "all", text: "Todo" },
+            { value: "quote", text: "Frases" },
+            { value: "letter", text: "Cartas" },
+          ].map((t) => (
+            <button
+              key={t.value}
+              className={type === t.value ? "active" : ""}
+              aria-pressed={type === t.value}
+              onClick={() => setType(t.value)}
+            >
+              {t.text}
+            </button>
+          ))}
+        </div>
+        <button
+          className={"favorites-filter " + (favorites ? "selected" : "")}
+          aria-pressed={favorites}
+          onClick={() => setFavorites(!favorites)}
+        >
+          <Heart size={16} />
+          <span>Favoritos</span>
+        </button>
+      </div>
+      {!notes.length ? (
+        <div className="empty-state">
+          <div className="letter-art" aria-hidden="true">
+            <Mail size={64} />
+            <Heart size={24} />
+          </div>
+          <h3>
+            Hay cosas que merecen
+            <br />
+            quedar escritas.
+          </h3>
+          <p>
+            Una carta larga, una frase pequeña.
+            <br />
+            Lo importante es que sea nuestra.
+          </p>
+          <button className="button secondary" onClick={onNew}>
+            Escribir nuestras primeras palabras
+          </button>
+        </div>
+      ) : (
+        <div className="notes-grid">
+          {filtered.map((note) => (
+            <article key={note.id} className={"note-card " + note.type}>
+              <div className="note-top">
+                <span>
+                  {note.type === "quote" ? (
+                    <>
+                      <Quote size={16} /> Una frase
+                    </>
+                  ) : (
+                    <>
+                      <Mail size={16} /> Una carta
+                    </>
+                  )}
+                </span>
+                <button
+                  className={
+                    "icon-button " + (note.favorite ? "is-favorite" : "")
+                  }
+                  aria-label={"Favorito: " + note.title}
+                  aria-pressed={note.favorite}
+                  onClick={() => void favorite(note)}
+                >
+                  <Heart
+                    size={18}
+                    fill={note.favorite ? "currentColor" : "none"}
+                  />
+                </button>
+              </div>
+              <button
+                className="note-body-button"
+                onClick={() => setReading(note.id)}
+              >
+                <h3>{note.title}</h3>
+                <p>{note.body}</p>
+                <span className="read-note">
+                  Leer {note.type === "letter" ? "carta" : "frase"}{" "}
+                  <ArrowUpRight size={16} />
+                </span>
+              </button>
+              <div className="note-footer">
+                <span>
+                  {note.author || "De mí, para vos"}
+                  <small>{formatDate(note.date)}</small>
+                </span>
+                <button
+                  className="icon-button"
+                  aria-label={"Editar " + note.title}
+                  onClick={() => onEdit(note)}
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label={"Eliminar " + note.title}
+                  onClick={() => setDeleting(note)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </article>
+          ))}
+          {!filtered.length && (
+            <p className="muted">No encontramos escritos con esos filtros.</p>
+          )}
+        </div>
+      )}
+      {current && (
+        <Dialog
+          title={
+            current.type === "letter"
+              ? "Una carta para vos"
+              : "Palabras nuestras"
+          }
+          onClose={() => setReading(null)}
+          wide
+        >
+          <article className="note-reader">
+            <span className="eyebrow">{formatDate(current.date, true)}</span>
+            <h2>{current.title}</h2>
+            <div>{current.body}</div>
+            <p className="signature">{current.author || "Con amor"}</p>
+            <Heart size={20} />
+          </article>
+        </Dialog>
+      )}
+      {deleting && (
+        <Confirm
+          title="¿Eliminar estas palabras?"
+          body={
+            "“" +
+            deleting.title +
+            "” se eliminará. Esta acción no se puede deshacer."
+          }
+          onClose={() => setDeleting(null)}
+          onConfirm={async () => {
+            try {
+              await api("/notes/" + deleting.id, "DELETE");
+              setDeleting(null);
+              await onChanged("Escrito eliminado.");
+            } catch (e) {
+              onError((e as Error).message);
+            }
+          }}
+        />
+      )}
+    </>
+  );
 }
-

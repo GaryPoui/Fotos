@@ -1,9 +1,9 @@
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 export function openDb(dir: string) {
   mkdirSync(dir, { recursive: true });
-  const db = new DatabaseSync(join(dir, 'rincon.sqlite'));
+  const db = new DatabaseSync(join(dir, "rincon.sqlite"));
   db.exec(`
     PRAGMA journal_mode=WAL;
     PRAGMA foreign_keys=ON;
@@ -25,4 +25,3 @@ export function openDb(dir: string) {
   `);
   return db;
 }
-

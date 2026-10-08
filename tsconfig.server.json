@@ -8,13 +8,7 @@
     "skipLibCheck": true,
     "outDir": "dist-server",
     "rootDir": ".",
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "server",
-    "shared",
-    "scripts"
-  ]
+  "include": ["server", "shared", "scripts"]
 }

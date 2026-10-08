@@ -1,36 +1,442 @@
-import { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Grid2X2, CalendarDays, GalleryHorizontalEnd, Heart, Play, Images, Pencil, Trash2, X } from 'lucide-react';
-import type { Media } from '../../shared/types';
-import { api, formatDate, mediaUrl } from '../lib';
-import { Confirm, Dialog } from './Dialog';
-import { Viewer } from './Viewer';
-type View = 'grid' | 'timeline' | 'carousel';
-export function Gallery({ items, onUpload, onChanged, onError }: { items: Media[]; onUpload: () => void; onChanged: (m: string) => Promise<void>; onError: (e: string) => void }) {
-  const [query, setQuery] = useState(''), [album, setAlbum] = useState(''), [kind, setKind] = useState(''), [favorites, setFavorites] = useState(false), [sort, setSort] = useState('desc'), [filters, setFilters] = useState(false);
-  const [view, setView] = useState<View>(() => { try { const stored = localStorage.getItem('rincon-view'); return stored === 'timeline' || stored === 'carousel' ? stored : 'grid'; } catch { return 'grid'; } });
-  const [selected, setSelected] = useState<string | null>(null), [editing, setEditing] = useState<Media | null>(null), [deleting, setDeleting] = useState<Media | null>(null);
-  const filtered = useMemo(() => items.filter(item => (!album || item.album === album) && (!kind || item.kind === kind) && (!favorites || item.favorite) && [item.title, item.album, ...item.tags].join(' ').toLocaleLowerCase('es').includes(query.toLocaleLowerCase('es'))).sort((a, b) => sort === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)), [items, album, kind, favorites, query, sort]);
-  const albums = [...new Set(items.map(i => i.album).filter(Boolean))].sort();
-  const favorite = async (item: Media) => { try { await api('/media/' + item.id, 'PATCH', { favorite: !item.favorite }); await onChanged(item.favorite ? 'Quitado de favoritos.' : 'Un favorito más.'); } catch (e) { onError((e as Error).message); } };
-  const card = (item: Media) => <article className="memory-card" key={item.id}>
-    <button className="memory-image" onClick={() => setSelected(item.id)} aria-label={'Abrir ' + item.title}>{item.kind === 'photo' ? <img src={mediaUrl(item.id, true)} alt={item.title} loading="lazy" /> : <><video src={mediaUrl(item.id)} preload="metadata" muted playsInline /><span className="video-badge"><Play size={16} fill="currentColor" /> Video</span></>}</button>
-    <button className={'favorite-button ' + (item.favorite ? 'is-favorite' : '')} aria-label={(item.favorite ? 'Quitar favorito: ' : 'Marcar favorito: ') + item.title} aria-pressed={item.favorite} onClick={() => void favorite(item)}><Heart size={18} fill={item.favorite ? 'currentColor' : 'none'} /></button>
-    <div className="memory-caption"><h3>{item.title}</h3><p>{formatDate(item.date)}{item.album && <span> · {item.album}</span>}</p></div>
-  </article>;
-  return <>
-    <div className="gallery-toolbar"><div className="searchbox"><Search size={18} /><input aria-label="Buscar recuerdos" placeholder="Buscar un recuerdo…" value={query} onChange={e => setQuery(e.target.value)} />{query && <button className="icon-button" aria-label="Limpiar búsqueda" onClick={() => setQuery('')}><X size={16} /></button>}</div><button className={'icon-button filter-toggle ' + (filters ? 'selected' : '')} aria-label="Mostrar filtros" aria-expanded={filters} onClick={() => setFilters(!filters)}><SlidersHorizontal size={19} /></button></div>
-    <div className="gallery-options"><div className="view-switch" aria-label="Vista de recuerdos">{([{ value: 'grid', icon: Grid2X2, label: 'Mosaico' }, { value: 'timeline', icon: CalendarDays, label: 'Línea de tiempo' }, { value: 'carousel', icon: GalleryHorizontalEnd, label: 'Carrusel' }] as const).map(({ value, icon: Icon, label }) => <button key={value} aria-label={label} aria-pressed={view === value} className={view === value ? 'active' : ''} onClick={() => { setView(value); try { localStorage.setItem('rincon-view', value); } catch { /* Preference only */ } }}><Icon size={17} /><span>{label}</span></button>)}</div><button className={'favorites-filter ' + (favorites ? 'selected' : '')} aria-pressed={favorites} onClick={() => setFavorites(!favorites)}><Heart size={16} fill={favorites ? 'currentColor' : 'none'} /><span>Favoritos</span></button></div>
-    {filters && <div className="filter-panel"><label>Álbum<select value={album} onChange={e => setAlbum(e.target.value)}><option value="">Todos los álbumes</option>{albums.map(a => <option key={a}>{a}</option>)}</select></label><label>Tipo<select value={kind} onChange={e => setKind(e.target.value)}><option value="">Fotos y videos</option><option value="photo">Fotos</option><option value="video">Videos</option></select></label><label>Orden<select value={sort} onChange={e => setSort(e.target.value)}><option value="desc">Más recientes primero</option><option value="asc">Más antiguos primero</option></select></label></div>}
-    {!items.length ? <div className="empty-state"><div className="empty-art" aria-hidden="true"><div className="mini-photo"><Images size={40} /><Heart size={20} /></div><span>✧</span></div><h3>Lo mejor de nosotros,<br />en un mismo lugar.</h3><p>Subí esa foto que siempre te hace sonreír.<br />Este álbum lo escribimos de a dos.</p><button className="button secondary" onClick={onUpload}>Guardar nuestro primer recuerdo</button><small>Fotos y videos · privados, siempre</small></div> : !filtered.length ? <div className="empty-state compact"><Search size={32} /><h3>No encontramos ese momento</h3><p>Probá otra búsqueda o cambiá los filtros.</p><button className="button secondary" onClick={() => { setQuery(''); setAlbum(''); setKind(''); setFavorites(false); }}>Ver todos los recuerdos</button></div> :
-      view === 'carousel' ? <Viewer key={filtered.map(i => i.id).join(',')} items={filtered} initialId={filtered[0].id} inline onClose={() => {}} onOpen={setSelected} onEdit={setEditing} onDelete={setDeleting} onFavorite={favorite} /> :
-      view === 'grid' ? <div className="memory-grid">{filtered.map(card)}</div> : <div className="timeline">{[...new Set(filtered.map(i => i.date.slice(0, 7)))].map(month => <section key={month}><h3 className="month-label"><span />{new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(new Date(month + '-15T12:00:00'))}</h3><div className="memory-grid">{filtered.filter(i => i.date.startsWith(month)).map(card)}</div></section>)}</div>}
-    {selected && filtered.some(i => i.id === selected) && <Viewer items={filtered} initialId={selected} onClose={() => setSelected(null)} onEdit={item => { setSelected(null); setEditing(item); }} onDelete={item => { setSelected(null); setDeleting(item); }} onFavorite={favorite} />}
-    {editing && <EditMedia item={editing} onClose={() => setEditing(null)} onChanged={onChanged} />}
-    {deleting && <Confirm title="¿Eliminar este recuerdo?" body={'“' + deleting.title + '” se eliminará junto con su archivo. Esta acción no se puede deshacer.'} onClose={() => setDeleting(null)} onConfirm={async () => { try { await api('/media/' + deleting.id, 'DELETE'); setDeleting(null); await onChanged('Recuerdo eliminado.'); } catch (e) { onError((e as Error).message); } }} />}
-  </>;
+import { useEffect, useMemo, useState } from "react";
+import {
+  Search,
+  SlidersHorizontal,
+  Grid2X2,
+  CalendarDays,
+  GalleryHorizontalEnd,
+  Heart,
+  Play,
+  Images,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
+import type { Media } from "../../shared/types";
+import { api, formatDate, mediaUrl } from "../lib";
+import { Confirm, Dialog } from "./Dialog";
+import { Viewer } from "./Viewer";
+type View = "grid" | "timeline" | "carousel";
+export function Gallery({
+  items,
+  onUpload,
+  onChanged,
+  onError,
+}: {
+  items: Media[];
+  onUpload: () => void;
+  onChanged: (m: string) => Promise<void>;
+  onError: (e: string) => void;
+}) {
+  const [query, setQuery] = useState(""),
+    [album, setAlbum] = useState(""),
+    [kind, setKind] = useState(""),
+    [favorites, setFavorites] = useState(false),
+    [sort, setSort] = useState("desc"),
+    [filters, setFilters] = useState(false);
+  const [view, setView] = useState<View>(() => {
+    try {
+      const stored = localStorage.getItem("rincon-view");
+      return stored === "timeline" || stored === "carousel" ? stored : "grid";
+    } catch {
+      return "grid";
+    }
+  });
+  const [selected, setSelected] = useState<string | null>(null),
+    [editing, setEditing] = useState<Media | null>(null),
+    [deleting, setDeleting] = useState<Media | null>(null);
+  const filtered = useMemo(
+    () =>
+      items
+        .filter(
+          (item) =>
+            (!album || item.album === album) &&
+            (!kind || item.kind === kind) &&
+            (!favorites || item.favorite) &&
+            [item.title, item.album, ...item.tags]
+              .join(" ")
+              .toLocaleLowerCase("es")
+              .includes(query.toLocaleLowerCase("es")),
+        )
+        .sort((a, b) =>
+          sort === "asc"
+            ? a.date.localeCompare(b.date)
+            : b.date.localeCompare(a.date),
+        ),
+    [items, album, kind, favorites, query, sort],
+  );
+  const albums = [...new Set(items.map((i) => i.album).filter(Boolean))].sort();
+  useEffect(() => {
+    if (selected && !filtered.some((item) => item.id === selected))
+      setSelected(null);
+  }, [selected, filtered]);
+  const favorite = async (item: Media) => {
+    try {
+      await api("/media/" + item.id, "PATCH", { favorite: !item.favorite });
+      await onChanged(
+        item.favorite ? "Quitado de favoritos." : "Un favorito más.",
+      );
+    } catch (e) {
+      onError((e as Error).message);
+    }
+  };
+  const card = (item: Media) => (
+    <article className="memory-card" key={item.id}>
+      <button
+        className="memory-image"
+        onClick={() => setSelected(item.id)}
+        aria-label={"Abrir " + item.title}
+      >
+        {item.kind === "photo" ? (
+          <img src={mediaUrl(item.id, true)} alt={item.title} loading="lazy" />
+        ) : (
+          <>
+            <video
+              src={mediaUrl(item.id)}
+              preload="metadata"
+              muted
+              playsInline
+            />
+            <span className="video-badge">
+              <Play size={16} fill="currentColor" /> Video
+            </span>
+          </>
+        )}
+      </button>
+      <button
+        className={"favorite-button " + (item.favorite ? "is-favorite" : "")}
+        aria-label={
+          (item.favorite ? "Quitar favorito: " : "Marcar favorito: ") +
+          item.title
+        }
+        aria-pressed={item.favorite}
+        onClick={() => void favorite(item)}
+      >
+        <Heart size={18} fill={item.favorite ? "currentColor" : "none"} />
+      </button>
+      <div className="memory-caption">
+        <h3>{item.title}</h3>
+        <p>
+          {formatDate(item.date)}
+          {item.album && <span> · {item.album}</span>}
+        </p>
+      </div>
+    </article>
+  );
+  return (
+    <>
+      <div className="gallery-toolbar">
+        <div className="searchbox">
+          <Search size={18} />
+          <input
+            aria-label="Buscar recuerdos"
+            placeholder="Buscar un recuerdo…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button
+              className="icon-button"
+              aria-label="Limpiar búsqueda"
+              onClick={() => setQuery("")}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        <button
+          className={"icon-button filter-toggle " + (filters ? "selected" : "")}
+          aria-label="Mostrar filtros"
+          aria-expanded={filters}
+          onClick={() => setFilters(!filters)}
+        >
+          <SlidersHorizontal size={19} />
+        </button>
+      </div>
+      <div className="gallery-options">
+        <div className="view-switch" aria-label="Vista de recuerdos">
+          {(
+            [
+              { value: "grid", icon: Grid2X2, label: "Mosaico" },
+              {
+                value: "timeline",
+                icon: CalendarDays,
+                label: "Línea de tiempo",
+              },
+              {
+                value: "carousel",
+                icon: GalleryHorizontalEnd,
+                label: "Carrusel",
+              },
+            ] as const
+          ).map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              aria-label={label}
+              aria-pressed={view === value}
+              className={view === value ? "active" : ""}
+              onClick={() => {
+                setView(value);
+                try {
+                  localStorage.setItem("rincon-view", value);
+                } catch {
+                  /* Preference only */
+                }
+              }}
+            >
+              <Icon size={17} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          className={"favorites-filter " + (favorites ? "selected" : "")}
+          aria-pressed={favorites}
+          onClick={() => setFavorites(!favorites)}
+        >
+          <Heart size={16} fill={favorites ? "currentColor" : "none"} />
+          <span>Favoritos</span>
+        </button>
+      </div>
+      {filters && (
+        <div className="filter-panel">
+          <label>
+            Álbum
+            <select value={album} onChange={(e) => setAlbum(e.target.value)}>
+              <option value="">Todos los álbumes</option>
+              {albums.map((a) => (
+                <option key={a}>{a}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Tipo
+            <select value={kind} onChange={(e) => setKind(e.target.value)}>
+              <option value="">Fotos y videos</option>
+              <option value="photo">Fotos</option>
+              <option value="video">Videos</option>
+            </select>
+          </label>
+          <label>
+            Orden
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="desc">Más recientes primero</option>
+              <option value="asc">Más antiguos primero</option>
+            </select>
+          </label>
+        </div>
+      )}
+      {!items.length ? (
+        <div className="empty-state">
+          <div className="empty-art" aria-hidden="true">
+            <div className="mini-photo">
+              <Images size={40} />
+              <Heart size={20} />
+            </div>
+            <span>✧</span>
+          </div>
+          <h3>
+            Lo mejor de nosotros,
+            <br />
+            en un mismo lugar.
+          </h3>
+          <p>
+            Subí esa foto que siempre te hace sonreír.
+            <br />
+            Este álbum lo escribimos de a dos.
+          </p>
+          <button className="button secondary" onClick={onUpload}>
+            Guardar nuestro primer recuerdo
+          </button>
+          <small>Fotos y videos · privados, siempre</small>
+        </div>
+      ) : !filtered.length ? (
+        <div className="empty-state compact">
+          <Search size={32} />
+          <h3>No encontramos ese momento</h3>
+          <p>Probá otra búsqueda o cambiá los filtros.</p>
+          <button
+            className="button secondary"
+            onClick={() => {
+              setQuery("");
+              setAlbum("");
+              setKind("");
+              setFavorites(false);
+            }}
+          >
+            Ver todos los recuerdos
+          </button>
+        </div>
+      ) : view === "carousel" ? (
+        <Viewer
+          key={filtered.map((i) => i.id).join(",")}
+          items={filtered}
+          initialId={filtered[0].id}
+          inline
+          onClose={() => {}}
+          onOpen={setSelected}
+          onEdit={setEditing}
+          onDelete={setDeleting}
+          onFavorite={favorite}
+        />
+      ) : view === "grid" ? (
+        <div className="memory-grid">{filtered.map(card)}</div>
+      ) : (
+        <div className="timeline">
+          {[...new Set(filtered.map((i) => i.date.slice(0, 7)))].map(
+            (month) => (
+              <section key={month}>
+                <h3 className="month-label">
+                  <span />
+                  {new Intl.DateTimeFormat("es-AR", {
+                    month: "long",
+                    year: "numeric",
+                  }).format(new Date(month + "-15T12:00:00"))}
+                </h3>
+                <div className="memory-grid">
+                  {filtered.filter((i) => i.date.startsWith(month)).map(card)}
+                </div>
+              </section>
+            ),
+          )}
+        </div>
+      )}
+      {selected && filtered.some((i) => i.id === selected) && (
+        <Viewer
+          items={filtered}
+          initialId={selected}
+          onClose={() => setSelected(null)}
+          onEdit={(item) => {
+            setSelected(null);
+            setEditing(item);
+          }}
+          onDelete={(item) => {
+            setSelected(null);
+            setDeleting(item);
+          }}
+          onFavorite={favorite}
+        />
+      )}
+      {editing && (
+        <EditMedia
+          item={editing}
+          onClose={() => setEditing(null)}
+          onChanged={onChanged}
+        />
+      )}
+      {deleting && (
+        <Confirm
+          title="¿Eliminar este recuerdo?"
+          body={
+            "“" +
+            deleting.title +
+            "” se eliminará junto con su archivo. Esta acción no se puede deshacer."
+          }
+          onClose={() => setDeleting(null)}
+          onConfirm={async () => {
+            try {
+              await api("/media/" + deleting.id, "DELETE");
+              setDeleting(null);
+              await onChanged("Recuerdo eliminado.");
+            } catch (e) {
+              onError((e as Error).message);
+            }
+          }}
+        />
+      )}
+    </>
+  );
 }
-function EditMedia({ item, onClose, onChanged }: { item: Media; onClose: () => void; onChanged: (m: string) => Promise<void> }) {
-  const [title, setTitle] = useState(item.title), [date, setDate] = useState(item.date), [album, setAlbum] = useState(item.album), [tags, setTags] = useState(item.tags.join(', ')), [error, setError] = useState(''), [busy, setBusy] = useState(false);
-  return <Dialog title="Los detalles del recuerdo" onClose={onClose} busy={busy}><form onSubmit={async e => { e.preventDefault(); setBusy(true); try { await api('/media/' + item.id, 'PATCH', { title, date, album, tags: [...new Set(tags.split(',').map(t => t.trim()).filter(Boolean))] }); await onChanged('Detalles guardados.'); onClose(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}><label>Título<input required maxLength={150} value={title} onChange={e => setTitle(e.target.value)} /></label><div className="form-row"><label>Fecha<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label><label>Álbum<input maxLength={80} value={album} onChange={e => setAlbum(e.target.value)} /></label></div><label>Etiquetas<input value={tags} onChange={e => setTags(e.target.value)} /><small>Separadas por comas.</small></label>{error && <p role="alert" className="form-error">{error}</p>}<button className="button primary full-width" disabled={busy}>Guardar detalles</button></form></Dialog>;
+function EditMedia({
+  item,
+  onClose,
+  onChanged,
+}: {
+  item: Media;
+  onClose: () => void;
+  onChanged: (m: string) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(item.title),
+    [date, setDate] = useState(item.date),
+    [album, setAlbum] = useState(item.album),
+    [tags, setTags] = useState(item.tags.join(", ")),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  return (
+    <Dialog title="Los detalles del recuerdo" onClose={onClose} busy={busy}>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          try {
+            await api("/media/" + item.id, "PATCH", {
+              title,
+              date,
+              album,
+              tags: [
+                ...new Set(
+                  tags
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean),
+                ),
+              ],
+            });
+            await onChanged("Detalles guardados.");
+            onClose();
+          } catch (e) {
+            setError((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label>
+          Título
+          <input
+            required
+            maxLength={150}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </label>
+        <div className="form-row">
+          <label>
+            Fecha
+            <input
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
+          <label>
+            Álbum
+            <input
+              maxLength={80}
+              value={album}
+              onChange={(e) => setAlbum(e.target.value)}
+            />
+          </label>
+        </div>
+        <label>
+          Etiquetas
+          <input
+            aria-label="Etiquetas"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+          />
+          <small>Separadas por comas.</small>
+        </label>
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
+        <button className="button primary full-width" disabled={busy}>
+          Guardar detalles
+        </button>
+      </form>
+    </Dialog>
+  );
 }
-
