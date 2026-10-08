@@ -423,7 +423,7 @@ function Login({
             <p>Escribila toda de corrido, en minúsculas y sin espacios.</p>
             <ol>
               <li>Los primeros dígitos son un número muy importante para los dos y de un pilotito que se parece un poquito a mí.</li>
-              <li>La segunda palabra es el lugar donde nos conocimos y nos comimos.</li>
+              <li>La segunda palabra es el lugar donde nos conocimos y nos sacamos nuestra primera foto, desde ese momento nunca te dejé de amar.</li>
               <li>La tercera es mi forma favorita de llamarte, es de tu color favorito y, si mirás para arriba, lo ves.</li>
             </ol>
           </div>
