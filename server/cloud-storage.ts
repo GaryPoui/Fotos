@@ -13,15 +13,18 @@ export function cloudStorage(
   url: string,
   secret: string,
   bucket = "recuerdos",
+  bridgeToken?: string,
 ): ObjectStorage {
   const origin = new URL(url);
   if (origin.protocol !== "https:" && origin.hostname !== "127.0.0.1")
     throw new Error("SUPABASE_URL debe usar HTTPS.");
-  const base = origin.origin + "/storage/v1";
+  const base = origin.origin + (bridgeToken ? "/functions/v1/rincon-storage" : "") + "/storage/v1";
   const bucketPath = encodeURIComponent(bucket);
   const objectPath = (key: string) =>
     bucketPath + "/" + encodeURIComponent(key);
-  const headers = { apikey: secret, Authorization: "Bearer " + secret };
+  const headers: Record<string, string> = bridgeToken
+    ? { apikey: secret, "X-Rincon-Storage-Token": bridgeToken }
+    : { apikey: secret, Authorization: "Bearer " + secret };
   async function request(path: string, init: RequestInit = {}) {
     try {
       return await fetch(base + path, {

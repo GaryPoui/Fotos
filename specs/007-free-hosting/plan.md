@@ -30,3 +30,6 @@ El 2026-10-08 el usuario eligió Firebase parcial + proveedor gratuito. Ver spec
 
 ## Selección actual
 El usuario volvió a elegir explícitamente Render Free + Supabase Free y contraseña propia el 2026-10-08. Se ejecutan las tareas de spec 007 y se conservan las mejoras de 008/009. Bucket rincon-render separado para preservar archivos y políticas de la publicación anterior.
+
+## Acceso al almacenamiento sin exportar credenciales administrativas
+Supabase Edge Function rincon-storage conserva el service-role gestionado por Supabase y acepta un token aleatorio de 256 bits conocido sólo por Render. El código desplegado contiene únicamente su hash SHA-256. Se restringen rutas y métodos al bucket rincon-render; no es un proxy general y nunca devuelve credenciales. Las llamadas usan el plan Free de Edge Functions. El adaptador también admite service-role directo si el usuario lo configura en otro despliegue.

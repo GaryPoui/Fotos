@@ -114,3 +114,10 @@ es spec 008; spec 007 conserva sus pendientes porque corresponde a otra arquitec
 
 Tests con contenido sintético y directorios temporales, sin tocar recuerdos personales.
 Evidencia local en test-results/ (ignorada por Git).
+
+## Render + Supabase (2026-10-08)
+- Arquitectura activa: spec 007, Express en Render y esquema privado rincon + bucket rincon-render en Supabase Free. Firebase se conserva como alternativa.
+- Build y tipos: PASS. Integración: 32 PASS, 5 reglas Firebase omitidas sin emulador. Navegador móvil/escritorio: 20 PASS tras integrar mejoras de recuerdos.
+- Supabase real: conexión PostgreSQL cifrada con CA verificada y rol dedicado, puente de Storage con token limitado, subida/miniatura/Range, carta y sesión conservadas al recrear servidor: PASS. Datos sintéticos eliminados al terminar.
+- GitHub Actions de integración previa: ejecución 37869802452 completada correctamente.
+- Publicación Render y prueba pública pendientes.

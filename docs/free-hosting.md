@@ -12,7 +12,12 @@ No se compra dominio, disco ni plan de pago. El subdominio onrender.com incluye 
    Alternativamente se admite conexión administrativa, que debe mantenerse sólo en backend.
 4. Usar TLS con verificación. DATABASE_CA acepta el certificado PEM de Supabase o una ruta al archivo.
    Descargar CA desde Connect/Database settings; no configurar rejectUnauthorized=false.
-5. Configurar SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY (service_role o secret server key), sólo backend.
+5. Configurar SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY y SUPABASE_STORAGE_BRIDGE_TOKEN en Render.
+   El puente supabase/functions/rincon-storage mantiene service_role dentro de Supabase y sólo permite
+   operar sobre rincon-render. Generar un token aleatorio de 32 bytes en hexadecimal; reemplazar
+   DEPLOYMENT_TOKEN_SHA256 en index.ts por su SHA-256 al desplegar la función (verify_jwt=false,
+   autenticación propia mediante X-Rincon-Storage-Token). Conservar el token únicamente en secretos.
+   Alternativamente se admite SUPABASE_SERVICE_ROLE_KEY directamente, sólo backend.
    Nunca prefijo VITE_, repositorio, mensajes públicos ni frontend. SUPABASE_BUCKET=rincon-render.
 6. Crear Web Service Docker en Render desde este repo, rama main, **Free**, una instancia, sin disco.
    render.yaml declara esta configuración; las variables sync:false se completan como secretos.

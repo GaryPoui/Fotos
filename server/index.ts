@@ -14,15 +14,17 @@ function mb(name: string, fallback: number) {
   return Math.round(value * 1024 * 1024);
 }
 const release = await acquireLock(resolve(process.env.DATA_DIR || "./data"));
+const storageKey = process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  (process.env.SUPABASE_STORAGE_BRIDGE_TOKEN && process.env.SUPABASE_PUBLISHABLE_KEY);
 const remoteKeys = [
   process.env.DATABASE_URL,
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  storageKey,
 ];
 const remote = remoteKeys.some(Boolean);
 if (remote && !remoteKeys.every(Boolean))
   throw new Error(
-    "Configurar DATABASE_URL, SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY juntos.",
+    "Configurar DATABASE_URL, SUPABASE_URL y credenciales de almacenamiento juntas.",
   );
 if (process.env.RENDER && !remote)
   throw new Error(
@@ -42,8 +44,9 @@ const runtime = await createApp({
   objectStorage: remote
     ? cloudStorage(
         process.env.SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        storageKey!,
         process.env.SUPABASE_BUCKET,
+        process.env.SUPABASE_STORAGE_BRIDGE_TOKEN,
       )
     : undefined,
 });
