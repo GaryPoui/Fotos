@@ -23,5 +23,13 @@ export function openDb(dir: string) {
     );
     CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires);
   `);
+  if (
+    !(db.prepare("PRAGMA table_info(media)").all() as { name: string }[]).some(
+      (column) => column.name === "storedBytes",
+    )
+  )
+    db.exec(
+      "ALTER TABLE media ADD COLUMN storedBytes INTEGER NOT NULL DEFAULT 0",
+    );
   return db;
 }

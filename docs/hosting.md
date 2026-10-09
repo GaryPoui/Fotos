@@ -1,11 +1,12 @@
 # Publicar nuestro rincón
 
-Esta aplicación necesita **un servidor Node y disco persistente**. GitHub Pages y un hosting
+Esta aplicación necesita **un servidor Node y persistencia local o remota**. Para presupuesto cero,
+seguir [Render Free + Supabase Free](free-hosting.md). GitHub Pages y un hosting
 estático no guardan recuerdos ni ejecutan esta API. El repo incluye Docker; no depende de Sites.
 
 ## Antes de publicar
 
-- Elegir APP_PASSWORD de 12 a 256 caracteres y guardarla únicamente como secreto del proveedor.
+- Elegir APP_PASSWORD de 10 a 256 caracteres y guardarla únicamente como secreto del proveedor.
 - Definir APP_ORIGIN como URL HTTPS exacta, sin barra final.
 - Node >=22.13, una instancia, volumen DATA_DIR y al menos 512 MiB de RAM.
 - MAX_STORAGE_MB limita los originales (1 GiB por defecto); reservar espacio adicional para miniaturas,

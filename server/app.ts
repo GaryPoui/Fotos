@@ -13,10 +13,17 @@ import {
   scrypt as scryptCallback,
   timingSafeEqual,
 } from "node:crypto";
-import { mkdirSync, existsSync, renameSync, unlinkSync } from "node:fs";
+import {
+  mkdirSync,
+  existsSync,
+  renameSync,
+  unlinkSync,
+  statSync,
+} from "node:fs";
 import { resolve, join } from "node:path";
 import { z, ZodError } from "zod";
-import { openDb } from "./db.js";
+import { openDatabase, type Database } from "./database.js";
+import type { ObjectStorage } from "./cloud-storage.js";
 import { inspectFile, thumbnail } from "./files.js";
 import type { Media, Note, Settings } from "../shared/types.js";
 
@@ -71,10 +78,11 @@ type MediaRow = Omit<Media, "tags" | "favorite"> & {
   filename: string;
   tags: string;
   favorite: number;
+  storedBytes: number;
 };
 type NoteRow = Omit<Note, "favorite"> & { favorite: number };
 function publicMedia(row: MediaRow): Media {
-  const { filename: _private, ...rest } = row;
+  const { filename: _private, storedBytes: _storedBytes, ...rest } = row;
   return {
     ...rest,
     tags: JSON.parse(row.tags),
@@ -92,14 +100,18 @@ export interface AppOptions {
   trustProxy?: number;
   maxFileBytes?: number;
   maxStorageBytes?: number;
+  databaseUrl?: string;
+  databaseCa?: string;
+  database?: Database;
+  objectStorage?: ObjectStorage;
 }
 export async function createApp(options: AppOptions) {
   if (
     !options.password ||
-    options.password.length < 12 ||
+    options.password.length < 10 ||
     options.password.length > 256
   )
-    throw new Error("APP_PASSWORD debe tener entre 12 y 256 caracteres.");
+    throw new Error("APP_PASSWORD debe tener entre 10 y 256 caracteres.");
   if (
     options.production &&
     (!options.origin || !options.origin.startsWith("https://"))
@@ -110,14 +122,28 @@ export async function createApp(options: AppOptions) {
     tmpDir = join(dir, "tmp");
   mkdirSync(mediaDir, { recursive: true });
   mkdirSync(tmpDir, { recursive: true });
-  const db = openDb(dir);
+  const remote = Boolean(options.objectStorage);
+  if (
+    Boolean(options.databaseUrl || options.database) !== remote &&
+    options.databaseUrl
+  )
+    throw new Error(
+      "La base remota requiere almacenamiento de objetos privado.",
+    );
+  if (remote && !options.databaseUrl && !options.database)
+    throw new Error("El almacenamiento remoto requiere base remota.");
+  await options.objectStorage?.verify();
+  const db =
+    options.database ||
+    (await openDatabase(dir, options.databaseUrl, options.databaseCa));
   let salt = (
-    db.prepare("SELECT value FROM meta WHERE key='salt'").get() as
-      { value: string } | undefined
+    (await db.prepare("SELECT value FROM meta WHERE key='salt'").get()) as
+      | { value: string }
+      | undefined
   )?.value;
   if (!salt) {
     salt = randomBytes(32).toString("hex");
-    db.prepare("INSERT INTO meta VALUES (?,?)").run("salt", salt);
+    await db.prepare("INSERT INTO meta VALUES (?,?)").run("salt", salt);
   }
   const passwordHash = await new Promise<Buffer>((res, rej) =>
     scryptCallback(
@@ -129,18 +155,25 @@ export async function createApp(options: AppOptions) {
     ),
   );
   const version = hash(passwordHash);
-  db.prepare("DELETE FROM sessions WHERE expires < ? OR version != ?").run(
-    Date.now(),
-    version,
-  );
+  await db
+    .prepare("DELETE FROM sessions WHERE expires < ? OR version != ?")
+    .run(Date.now(), version);
   const maxFile = options.maxFileBytes ?? 200 * 1024 * 1024,
     maxStorage = options.maxStorageBytes ?? 1024 * 1024 * 1024;
-  const used = () =>
-    (
-      db.prepare("SELECT COALESCE(SUM(size),0) AS bytes FROM media").get() as {
-        bytes: number;
-      }
-    ).bytes;
+  const used = async () =>
+    Number(
+      (
+        (await db
+          .prepare(
+            "SELECT COALESCE(SUM(" +
+              (remote ? "storedBytes" : "size") +
+              "),0) AS bytes FROM media",
+          )
+          .get()) as {
+          bytes: number;
+        }
+      ).bytes,
+    );
   const app = express();
   app.disable("x-powered-by");
   if (options.trustProxy) app.set("trust proxy", options.trustProxy);
@@ -154,12 +187,12 @@ export async function createApp(options: AppOptions) {
       },
     }),
   );
-  app.use("/api", (_req, res, next) => {
+  app.use("/api", async (_req, res, next) => {
     res.set("Cache-Control", "no-store");
     next();
   });
   app.use(express.json({ limit: "128kb" }));
-  app.use("/api", (req, _res, next) => {
+  app.use("/api", async (req, _res, next) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       if (req.get("X-Requested-With") !== "NuestroRincon")
         return next(new ApiError(403, "Solicitud no permitida."));
@@ -174,13 +207,13 @@ export async function createApp(options: AppOptions) {
     next();
   });
   const tokenOf = (req: Request) => parse(req.headers.cookie || "").rincon;
-  const authenticated = (req: Request) => {
+  const authenticated = async (req: Request) => {
     const token = tokenOf(req);
     return (
       token &&
       token.length <= 128 &&
       Boolean(
-        db
+        await db
           .prepare(
             "SELECT token FROM sessions WHERE token=? AND expires>? AND version=?",
           )
@@ -188,13 +221,13 @@ export async function createApp(options: AppOptions) {
       )
     );
   };
-  const auth = (req: Request, _res: Response, next: NextFunction) =>
-    authenticated(req)
+  const auth = async (req: Request, _res: Response, next: NextFunction) =>
+    (await authenticated(req))
       ? next()
       : next(new ApiError(401, "Ingresá para abrir nuestro rincón."));
-  app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
-  app.get("/api/session", (req, res) =>
-    res.json({ authenticated: Boolean(authenticated(req)) }),
+  app.get("/api/health", async (_req, res) => res.json({ status: "ok" }));
+  app.get("/api/session", async (req, res) =>
+    res.json({ authenticated: Boolean(await authenticated(req)) }),
   );
   const attempts = new Map<string, { count: number; until: number }>();
   let hashing = false;
@@ -240,14 +273,13 @@ export async function createApp(options: AppOptions) {
       throw new ApiError(401, "La contraseña no coincide. Probá de nuevo.");
     attempts.delete(ip);
     const old = tokenOf(req);
-    if (old) db.prepare("DELETE FROM sessions WHERE token=?").run(hash(old));
-    db.prepare("DELETE FROM sessions WHERE expires < ?").run(now);
+    if (old)
+      await db.prepare("DELETE FROM sessions WHERE token=?").run(hash(old));
+    await db.prepare("DELETE FROM sessions WHERE expires < ?").run(now);
     const token = randomBytes(32).toString("hex");
-    db.prepare("INSERT INTO sessions VALUES (?,?,?)").run(
-      hash(token),
-      now + 7 * 86400_000,
-      version,
-    );
+    await db
+      .prepare("INSERT INTO sessions VALUES (?,?,?)")
+      .run(hash(token), now + 7 * 86400_000, version);
     res.setHeader(
       "Set-Cookie",
       stringifySetCookie({
@@ -262,8 +294,10 @@ export async function createApp(options: AppOptions) {
     );
     res.json({ authenticated: true });
   });
-  app.post("/api/logout", auth, (req, res) => {
-    db.prepare("DELETE FROM sessions WHERE token=?").run(hash(tokenOf(req)!));
+  app.post("/api/logout", auth, async (req, res) => {
+    await db
+      .prepare("DELETE FROM sessions WHERE token=?")
+      .run(hash(tokenOf(req)!));
     res.setHeader(
       "Set-Cookie",
       stringifySetCookie({
@@ -279,43 +313,45 @@ export async function createApp(options: AppOptions) {
     res.status(204).end();
   });
   app.use("/api", auth);
-  const getSettings = (): Settings => {
-    const row = db
+  const getSettings = async (): Promise<Settings> => {
+    const row = (await db
       .prepare("SELECT value FROM meta WHERE key='settings'")
-      .get() as { value: string } | undefined;
+      .get()) as { value: string } | undefined;
     return row
       ? JSON.parse(row.value)
       : { names: "Ailu y Tomy", title: "Nuestro rincón", since: "" };
   };
-  const mediaRows = () =>
+  const mediaRows = async () =>
     (
-      db
+      (await db
         .prepare("SELECT * FROM media ORDER BY date DESC, createdAt DESC")
-        .all() as unknown as MediaRow[]
+        .all()) as unknown as MediaRow[]
     ).map(publicMedia);
-  const noteRows = () =>
+  const noteRows = async () =>
     (
-      db
+      (await db
         .prepare("SELECT * FROM notes ORDER BY date DESC, createdAt DESC")
-        .all() as unknown as NoteRow[]
+        .all()) as unknown as NoteRow[]
     ).map(publicNote);
-  app.get("/api/library", (_req, res) =>
+  app.get("/api/library", async (_req, res) =>
     res.json({
-      media: mediaRows(),
-      notes: noteRows(),
-      settings: getSettings(),
-      storage: { used: used(), limit: maxStorage, maxFile },
+      media: await mediaRows(),
+      notes: await noteRows(),
+      settings: await getSettings(),
+      storage: { used: await used(), limit: maxStorage, maxFile },
     }),
   );
-  app.get("/api/settings", (_req, res) => res.json(getSettings()));
-  app.patch("/api/settings", (req, res) => {
+  app.get("/api/settings", async (_req, res) => res.json(await getSettings()));
+  app.patch("/api/settings", async (req, res) => {
     const settings = settingsInput.parse(req.body);
-    db.prepare(
-      "INSERT INTO meta VALUES ('settings',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    ).run(JSON.stringify(settings));
+    await db
+      .prepare(
+        "INSERT INTO meta VALUES ('settings',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+      )
+      .run(JSON.stringify(settings));
     res.json(settings);
   });
-  app.get("/api/media", (_req, res) => res.json(mediaRows()));
+  app.get("/api/media", async (_req, res) => res.json(await mediaRows()));
   const upload = multer({
     dest: tmpDir,
     limits: {
@@ -326,11 +362,20 @@ export async function createApp(options: AppOptions) {
       fieldSize: 4096,
     },
   }).single("file");
+  let uploadTail = Promise.resolve();
   app.post("/api/media", upload, async (req, res) => {
     if (!req.file) throw new ApiError(400, "Elegí un archivo.");
     const tempPath = req.file.path;
     let target = "",
       thumb = "";
+    const uploadedKeys: string[] = [];
+    let committed = false;
+    let releaseUpload!: () => void;
+    const previousUpload = uploadTail;
+    uploadTail = new Promise<void>((resolve) => {
+      releaseUpload = resolve;
+    });
+    await previousUpload;
     try {
       const input = mediaInput.parse({
         title:
@@ -350,7 +395,7 @@ export async function createApp(options: AppOptions) {
           "No pudimos leer ese formato. Usá una foto, video o audio compatible.",
         );
       }
-      if (used() + req.file.size > maxStorage)
+      if ((await used()) + req.file.size > maxStorage)
         throw new ApiError(
           413,
           "El espacio está lleno. Borrá algún archivo o ampliá el almacenamiento.",
@@ -368,51 +413,82 @@ export async function createApp(options: AppOptions) {
           );
         }
       }
-      // Check again after asynchronous thumbnail generation; insert has no awaits.
-      if (used() + req.file.size > maxStorage)
+      const storedBytes =
+        req.file.size + (remote && thumb ? statSync(thumb).size : 0);
+      if ((await used()) + storedBytes > maxStorage)
         throw new ApiError(413, "El espacio está lleno.");
-      target = join(mediaDir, filename);
-      renameSync(tempPath, target);
-      db.prepare(
-        "INSERT INTO media (id,kind,filename,mime,size,title,date,album,tags,artist,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-      ).run(
-        id,
-        detected.kind,
-        filename,
-        detected.mime,
-        req.file.size,
-        input.title,
-        input.date,
-        input.album,
-        JSON.stringify(input.tags),
-        input.artist,
-        new Date().toISOString(),
-      );
+      if (options.objectStorage) {
+        uploadedKeys.push(filename);
+        await options.objectStorage.put(filename, tempPath, detected.mime);
+        if (thumb) {
+          uploadedKeys.push(id + ".thumb.webp");
+          await options.objectStorage.put(
+            id + ".thumb.webp",
+            thumb,
+            "image/webp",
+          );
+        }
+      } else {
+        target = join(mediaDir, filename);
+        renameSync(tempPath, target);
+      }
+      await db
+        .prepare(
+          "INSERT INTO media (id,kind,filename,mime,size,title,date,album,tags,artist,createdAt,storedBytes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        )
+        .run(
+          id,
+          detected.kind,
+          filename,
+          detected.mime,
+          req.file.size,
+          input.title,
+          input.date,
+          input.album,
+          JSON.stringify(input.tags),
+          input.artist,
+          new Date().toISOString(),
+          storedBytes,
+        );
+      committed = true;
       target = "";
-      thumb = ""; // committed, retain files
+      if (!remote) thumb = ""; // local originals and thumbnails are persistent
       res
         .status(201)
         .json(
           publicMedia(
-            db
+            (await db
               .prepare("SELECT * FROM media WHERE id=?")
-              .get(id) as unknown as MediaRow,
+              .get(id)) as unknown as MediaRow,
           ),
         );
     } finally {
-      for (const path of [tempPath, target, thumb])
-        if (path && existsSync(path)) unlinkSync(path);
+      try {
+        if (!committed && options.objectStorage && uploadedKeys.length) {
+          try {
+            await options.objectStorage.remove(uploadedKeys);
+          } catch {
+            console.error(
+              "No se pudieron limpiar objetos de una subida fallida; revisar huérfanos en Storage.",
+            );
+          }
+        }
+        for (const path of [tempPath, target, thumb])
+          if (path && existsSync(path)) unlinkSync(path);
+      } finally {
+        releaseUpload();
+      }
     }
   });
-  const findMedia = (id: string) => {
-    const row = db
+  const findMedia = async (id: string) => {
+    const row = (await db
       .prepare("SELECT * FROM media WHERE id=?")
-      .get(id) as unknown as MediaRow | undefined;
+      .get(id)) as unknown as MediaRow | undefined;
     if (!row) throw new ApiError(404, "Este recuerdo ya no está.");
     return row;
   };
-  app.patch("/api/media/:id", (req, res) => {
-    const row = findMedia(String(req.params.id));
+  app.patch("/api/media/:id", async (req, res) => {
+    const row = await findMedia(String(req.params.id));
     const current = publicMedia(row);
     const { title, date, album, tags, favorite, artist } = current;
     const input = mediaInput.parse({
@@ -424,32 +500,49 @@ export async function createApp(options: AppOptions) {
       artist,
       ...req.body,
     });
-    db.prepare(
-      "UPDATE media SET title=?,date=?,album=?,tags=?,favorite=?,artist=? WHERE id=?",
-    ).run(
-      input.title,
-      input.date,
-      input.album,
-      JSON.stringify(input.tags),
-      Number(input.favorite),
-      input.artist,
-      row.id,
-    );
-    res.json(publicMedia(findMedia(row.id)));
+    await db
+      .prepare(
+        "UPDATE media SET title=?,date=?,album=?,tags=?,favorite=?,artist=? WHERE id=?",
+      )
+      .run(
+        input.title,
+        input.date,
+        input.album,
+        JSON.stringify(input.tags),
+        Number(input.favorite),
+        input.artist,
+        row.id,
+      );
+    res.json(publicMedia(await findMedia(row.id)));
   });
-  app.delete("/api/media/:id", (req, res) => {
-    const row = findMedia(String(req.params.id));
+  app.delete("/api/media/:id", async (req, res) => {
+    const row = await findMedia(String(req.params.id));
+    if (options.objectStorage)
+      await options.objectStorage.remove([
+        row.filename,
+        ...(row.kind === "photo" ? [row.id + ".thumb.webp"] : []),
+      ]);
     for (const path of [
       join(mediaDir, row.filename),
       join(mediaDir, row.id + ".thumb.webp"),
     ])
       if (existsSync(path)) unlinkSync(path);
-    db.prepare("DELETE FROM media WHERE id=?").run(row.id);
+    await db.prepare("DELETE FROM media WHERE id=?").run(row.id);
     res.status(204).end();
   });
-  app.get("/api/files/:id", (req, res, next) => {
-    const row = findMedia(String(req.params.id));
+  app.get("/api/files/:id", async (req, res, next) => {
+    const row = await findMedia(String(req.params.id));
     const isThumb = req.query.thumb === "1" && row.kind === "photo";
+    res.set("Content-Type", isThumb ? "image/webp" : row.mime);
+    res.set("Content-Disposition", "inline");
+    if (options.objectStorage) {
+      await options.objectStorage.serve(
+        isThumb ? row.id + ".thumb.webp" : row.filename,
+        req,
+        res,
+      );
+      return;
+    }
     const path = join(
       mediaDir,
       isThumb ? row.id + ".thumb.webp" : row.filename,
@@ -465,31 +558,33 @@ export async function createApp(options: AppOptions) {
       if (err && !res.headersSent) next(err);
     });
   });
-  app.get("/api/notes", (_req, res) => res.json(noteRows()));
-  const findNote = (id: string) => {
-    const row = db
+  app.get("/api/notes", async (_req, res) => res.json(await noteRows()));
+  const findNote = async (id: string) => {
+    const row = (await db
       .prepare("SELECT * FROM notes WHERE id=?")
-      .get(id) as unknown as NoteRow | undefined;
+      .get(id)) as unknown as NoteRow | undefined;
     if (!row) throw new ApiError(404, "Este escrito ya no está.");
     return row;
   };
-  app.post("/api/notes", (req, res) => {
+  app.post("/api/notes", async (req, res) => {
     const input = noteInput.parse(req.body),
       id = randomUUID();
-    db.prepare("INSERT INTO notes VALUES (?,?,?,?,?,?,?,?)").run(
-      id,
-      input.type,
-      input.title,
-      input.body,
-      input.author,
-      input.date,
-      Number(input.favorite),
-      new Date().toISOString(),
-    );
-    res.status(201).json(publicNote(findNote(id)));
+    await db
+      .prepare("INSERT INTO notes VALUES (?,?,?,?,?,?,?,?)")
+      .run(
+        id,
+        input.type,
+        input.title,
+        input.body,
+        input.author,
+        input.date,
+        Number(input.favorite),
+        new Date().toISOString(),
+      );
+    res.status(201).json(publicNote(await findNote(id)));
   });
-  app.patch("/api/notes/:id", (req, res) => {
-    const row = findNote(String(req.params.id));
+  app.patch("/api/notes/:id", async (req, res) => {
+    const row = await findNote(String(req.params.id));
     const { type, title, body, author, date, favorite } = publicNote(row);
     const input = noteInput.parse({
       type,
@@ -500,31 +595,35 @@ export async function createApp(options: AppOptions) {
       favorite,
       ...req.body,
     });
-    db.prepare(
-      "UPDATE notes SET type=?,title=?,body=?,author=?,date=?,favorite=? WHERE id=?",
-    ).run(
-      input.type,
-      input.title,
-      input.body,
-      input.author,
-      input.date,
-      Number(input.favorite),
-      row.id,
-    );
-    res.json(publicNote(findNote(row.id)));
+    await db
+      .prepare(
+        "UPDATE notes SET type=?,title=?,body=?,author=?,date=?,favorite=? WHERE id=?",
+      )
+      .run(
+        input.type,
+        input.title,
+        input.body,
+        input.author,
+        input.date,
+        Number(input.favorite),
+        row.id,
+      );
+    res.json(publicNote(await findNote(row.id)));
   });
-  app.delete("/api/notes/:id", (req, res) => {
-    const row = findNote(String(req.params.id));
-    db.prepare("DELETE FROM notes WHERE id=?").run(row.id);
+  app.delete("/api/notes/:id", async (req, res) => {
+    const row = await findNote(String(req.params.id));
+    await db.prepare("DELETE FROM notes WHERE id=?").run(row.id);
     res.status(204).end();
   });
-  app.use("/api", (_req, _res, next) =>
+  app.use("/api", async (_req, _res, next) =>
     next(new ApiError(404, "Ruta no encontrada.")),
   );
   const dist = resolve("dist");
   if (existsSync(dist)) {
     app.use(express.static(dist));
-    app.get("/{*path}", (_req, res) => res.sendFile(join(dist, "index.html")));
+    app.get("/{*path}", async (_req, res) =>
+      res.sendFile(join(dist, "index.html")),
+    );
   }
   app.use(
     (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
@@ -546,23 +645,19 @@ export async function createApp(options: AppOptions) {
         return;
       }
       if (error instanceof ZodError || error instanceof SyntaxError) {
-        res
-          .status(400)
-          .json({
-            error:
-              "Revisá los campos: hay datos vacíos, inválidos o demasiado largos.",
-          });
+        res.status(400).json({
+          error:
+            "Revisá los campos: hay datos vacíos, inválidos o demasiado largos.",
+        });
         return;
       }
       if (error instanceof multer.MulterError) {
-        res
-          .status(error.code === "LIMIT_FILE_SIZE" ? 413 : 400)
-          .json({
-            error:
-              error.code === "LIMIT_FILE_SIZE"
-                ? "El archivo supera el tamaño permitido."
-                : "Subí un solo archivo por vez, con los campos indicados.",
-          });
+        res.status(error.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({
+          error:
+            error.code === "LIMIT_FILE_SIZE"
+              ? "El archivo supera el tamaño permitido."
+              : "Subí un solo archivo por vez, con los campos indicados.",
+        });
         return;
       }
       console.error(
@@ -581,7 +676,7 @@ export async function createApp(options: AppOptions) {
     close: () => {
       if (!closed) {
         closed = true;
-        db.close();
+        return db.close();
       }
     },
   };
