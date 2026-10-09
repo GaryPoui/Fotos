@@ -12,6 +12,7 @@ import {
 import type { Media } from "../../shared/types";
 import { formatDate, mediaUrl } from "../lib";
 import { Dialog } from "./Dialog";
+import { Coverflow } from "./Coverflow";
 export function Viewer({
   items,
   initialId,
@@ -43,7 +44,7 @@ export function Viewer({
   const [reduced, setReduced] = useState(
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
-  const touch = useRef<number | null>(null);
+  const touch = useRef<{ x: number; y: number } | null>(null);
   const item = items[index % items.length];
   const step = (delta: number) => {
     setIndex((n) => (n + delta + items.length) % items.length);
@@ -97,22 +98,43 @@ export function Viewer({
   const content = (
     <div className={"viewer " + (inline ? "inline-viewer" : "")}>
       <div
-        className="viewer-stage"
+        className={"viewer-stage" + (inline ? " coverflow-stage" : "")}
+        role={inline ? "region" : undefined}
+        aria-label={inline ? "Carrusel de recuerdos" : undefined}
+        aria-roledescription={inline ? "carrusel" : undefined}
+        tabIndex={inline ? 0 : undefined}
+        onKeyDown={(e) => {
+          if (!inline || e.target instanceof HTMLVideoElement) return;
+          if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+            e.preventDefault();
+            step(e.key === "ArrowRight" ? 1 : -1);
+            setAuto(false);
+          }
+        }}
         onTouchStart={(e) => {
-          touch.current = e.touches[0].clientX;
+          touch.current = e.target instanceof HTMLVideoElement ? null : {
+            x: e.touches[0].clientX, y: e.touches[0].clientY,
+          };
         }}
         onTouchEnd={(e) => {
           if (touch.current !== null) {
-            const delta = e.changedTouches[0].clientX - touch.current;
-            if (Math.abs(delta) > 60) {
+            const delta = e.changedTouches[0].clientX - touch.current.x;
+            const vertical = e.changedTouches[0].clientY - touch.current.y;
+            if (Math.abs(delta) > 60 && Math.abs(delta) > Math.abs(vertical)) {
               step(delta < 0 ? 1 : -1);
               setAuto(false);
             }
           }
           touch.current = null;
         }}
+        onTouchCancel={() => { touch.current = null; }}
       >
-        {failed ? (
+        {inline ? (
+          <Coverflow items={items} index={index % items.length}
+            onSelect={(offset) => { step(offset); setAuto(false); }}
+            onOpen={(id) => { setAuto(false); onOpen?.(id); }}
+            onPlay={() => setAuto(false)} />
+        ) : failed ? (
           <div className="media-failed">
             <p>No pudimos abrir este archivo.</p>
             <button

@@ -10,6 +10,8 @@
 - [X] T003 [US1] Implementar visor y carrusel con teclado/toque en src/components/Viewer.tsx
 - [X] T004 [US1] Implementar pausa, temporizador y movimiento reducido en src/components/Viewer.tsx y src/styles.css
 - [X] T005 [US1] Verificar recorridos y vista de 390 px en tests/e2e.spec.ts y docs/verification.md
+- [X] T006 [US1] Implementar escenario con profundidad, transición y selección lateral en src/components/Coverflow.tsx y src/styles.css; integrar en Viewer.tsx conservando visor completo, pausa de video y gestos accesibles.
+- [ ] T007 [US1] Verificar vuelta circular, pocos recuerdos, teclado, toque, video, movimiento reducido y diseño móvil/escritorio; registrar evidencia, build, commit y push; publicar en Render Free.
 ## Dependencies & Execution Order
 T001 primero; tareas en orden. 001 → 002 → 003; 004/005 dependen de 001/002; 006 cierra integración.
 ## Parallel opportunities

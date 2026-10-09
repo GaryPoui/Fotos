@@ -305,6 +305,21 @@ test("video uploads privately and opens paused with working playback", async ({
     .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime))
     .toBeGreaterThan(0);
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  const companion = await page.request.post('/api/media', {headers, multipart: {
+    file: {name:'companion.png',mimeType:'image/png',buffer:png},
+    title: title + ' compañía', date:'2020-01-01',
+  }});
+  const companionId = (await companion.json()).id;
+  await page.reload();
+  await page.getByLabel('Buscar recuerdos').fill(title);
+  await page.getByRole('button',{name:'Carrusel',exact:true}).click();
+  const inlineVideo = page.locator('.coverflow-card video');
+  await expect.poll(()=>inlineVideo.evaluate((v:HTMLVideoElement)=>v.readyState)).toBeGreaterThan(0);
+  expect(await inlineVideo.evaluate((v:HTMLVideoElement)=>v.paused)).toBe(true);
+  await inlineVideo.evaluate((v:HTMLVideoElement)=>{v.currentTime=0;return v.play();});
+  await page.getByRole('button',{name:'Recuerdo siguiente'}).click();
+  await expect.poll(()=>inlineVideo.evaluate((v:HTMLVideoElement)=>v.paused)).toBe(true);
+  await page.request.delete('/api/media/'+companionId,{headers});
   await assertFits(page);
 });
 
@@ -549,4 +564,72 @@ test("logout removes private pending files and TUS references from the device", 
       }),
   );
   expect(count).toBe(0);
+});
+
+test("coverflow: circular navigation, side selection, swipe, keyboard and reduced motion", async ({ page }, info) => {
+  await login(page);
+  const ids: string[] = [];
+  try {
+    for (let i = 1; i <= 5; i++) {
+      const response = await page.request.post('/api/media', { headers, multipart: {
+        file: {name: 'demo.png', mimeType: 'image/png', buffer: png},
+        title: 'Demo carrusel ' + i, album: 'Coverflow ' + info.project.name,
+        date: '2026-09-0' + i,
+      }});
+      expect(response.status()).toBe(201);
+      ids.push((await response.json()).id);
+    }
+    await page.reload();
+    await page.getByRole('button', {name:'Mostrar filtros'}).click();
+    await page.getByRole('combobox', {name:'Álbum',exact:true}).selectOption('Coverflow ' + info.project.name);
+    await page.getByRole('button', {name:'Carrusel',exact:true}).click();
+    const stage = page.getByRole('region', {name:'Carrusel de recuerdos'});
+    await expect(stage.locator('.coverflow-card')).toHaveCount(5);
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
+    await stage.getByRole('button', {name:'Recuerdo anterior'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 1');
+    await stage.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
+    await stage.getByRole('button', {name:'Ir a Demo carrusel 4',exact:true}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 4');
+    await stage.evaluate(el => { const event = new Event('touchstart', {bubbles:true}); Object.defineProperty(event, 'touches', {value:[{clientX:230,clientY:200}]}); el.dispatchEvent(event); });
+    await stage.evaluate(el => { const event = new Event('touchend', {bubbles:true}); Object.defineProperty(event, 'changedTouches', {value:[{clientX:100,clientY:210}]}); el.dispatchEvent(event); });
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 3');
+    await stage.evaluate(el => { const event = new Event('touchstart', {bubbles:true}); Object.defineProperty(event, 'touches', {value:[{clientX:230,clientY:200}]}); el.dispatchEvent(event); });
+    await stage.evaluate(el => { const event = new Event('touchend', {bubbles:true}); Object.defineProperty(event, 'changedTouches', {value:[{clientX:130,clientY:400}]}); el.dispatchEvent(event); });
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 3');
+    await expect.poll(()=>stage.locator('.is-active').evaluate(el=>el.getAnimations().length)).toBe(0);
+    await assertFits(page);
+    await stage.screenshot({path:'test-results/' + info.project.name + '-coverflow.png'});
+    await stage.getByRole('button',{name:'Ver Demo carrusel 3',exact:true}).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    expect(await stage.locator('.is-active').evaluate(el=>getComputedStyle(el).transitionDuration)).toBe('0s');
+    await expect(page.getByRole('button',{name:'Presentación',exact:true})).toBeDisabled();
+    await stage.getByRole('button',{name:'Recuerdo siguiente'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 2');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    if(info.project.name==='mobile') {
+      await page.setViewportSize({width:360,height:780}); await assertFits(page);
+    }
+    for(const id of ids.slice(2)) await page.request.delete('/api/media/'+id,{headers});
+    const reloadAlbum = async () => {
+      await page.reload();
+      await page.getByRole('button',{name:'Mostrar filtros'}).click();
+      await page.getByRole('combobox',{name:'Álbum',exact:true}).selectOption('Coverflow ' + info.project.name);
+    };
+    await reloadAlbum();
+    await expect(stage.locator('.coverflow-card')).toHaveCount(2);
+    await stage.getByRole('button',{name:'Recuerdo siguiente'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 1');
+    await page.request.delete('/api/media/'+ids[0],{headers});
+    await reloadAlbum();
+    await expect(stage.locator('.coverflow-card')).toHaveCount(1);
+    await expect(stage.getByRole('button',{name:'Recuerdo siguiente'})).toHaveCount(0);
+    await assertFits(page);
+  } finally {
+    for(const id of ids) await page.request.delete('/api/media/'+id,{headers});
+  }
 });

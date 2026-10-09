@@ -126,3 +126,9 @@ Evidencia local en test-results/ (ignorada por Git).
 - Reinicio real de Render registrado en Events el 2026-10-08 22:37 ART: misma sesión, foto y carta recuperadas: PASS. Contenido sintético eliminado al terminar.
 - Chromium móvil 390×844 sobre producción: ingreso, carga de biblioteca y sin desbordamiento horizontal: PASS. Capturas en test-results/render-mobile-login.png y render-mobile-live.png (ignoradas por Git).
 - No se agregó tarjeta, disco ni plan de pago. Publicación del código 625defe; cambios posteriores de documentación no requieren recompilación.
+
+## Carrusel con profundidad (2026-10-08)
+- Spec 003 FR-005/006: tarjetas inclinadas con perspectiva, centro destacado y transición circular de 550 ms; miniaturas privadas, sin nuevas dependencias.
+- Build y tipos PASS. Galería existente móvil/escritorio: 2 PASS. Recorridos nuevos de carrusel y video móvil/escritorio: 4 PASS.
+- Verificados selección lateral, teclado, gesto horizontal/scroll vertical, vuelta circular, bibliotecas de uno/dos/cinco elementos, ampliación, pausa del video saliente y movimiento reducido. Sin desbordamiento a 360 px y controles >=44 px.
+- Capturas sintéticas revisadas en test-results/mobile-coverflow.png y desktop-coverflow.png. Publicación pendiente.

@@ -1061,6 +1061,84 @@ main {
 .inline-viewer .viewer-stage {
   aspect-ratio: 4/5;
 }
+.inline-viewer .coverflow-stage {
+  --card-width: min(64%, 320px);
+  --card-spacing: clamp(85px, 25vw, 215px);
+  aspect-ratio: auto;
+  height: clamp(360px, 106vw, 580px);
+  max-height: none;
+  background: radial-gradient(ellipse at 25% 70%, #dceefa99, transparent 60%),
+    radial-gradient(ellipse at 80% 35%, #f8e3ed99, transparent 60%);
+  perspective: 1100px;
+  isolation: isolate;
+}
+.coverflow-track {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+.coverflow-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--card-width);
+  aspect-ratio: 3/5;
+  max-height: calc(100% - 40px);
+  border-radius: 15px;
+  background: #e7eff5;
+  overflow: hidden;
+  box-shadow: 0 16px 30px #29425324;
+  transform: translate(-50%, -50%) translateX(calc(var(--offset) * var(--card-spacing)))
+    translateZ(calc(var(--depth) * -85px)) rotateY(calc(var(--tilt) * 1deg));
+  transition: transform 550ms cubic-bezier(.22,.68,.18,1), opacity 550ms ease;
+  pointer-events: auto;
+}
+.coverflow-card img,
+.coverflow-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.coverflow-card.is-active video {
+  object-fit: contain;
+  background: #253746;
+}
+.coverflow-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+}
+.coverflow-select:focus-visible {
+  outline: 3px solid #5996bd;
+  outline-offset: -5px;
+}
+.coverflow-card[data-side="left"] .coverflow-select {
+  width: 34%;
+  right: auto;
+}
+.coverflow-card[data-side="right"] .coverflow-select {
+  width: 34%;
+  left: auto;
+}
+.coverflow-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, #28465e05, #28465e33);
+  opacity: 1;
+  transition: opacity 550ms ease;
+}
+.coverflow-card.is-active .coverflow-shade { opacity: 0; }
+.coverflow-stage .viewer-arrow,
+.coverflow-stage .viewer-expand,
+.coverflow-stage .viewer-counter { z-index: 10; }
+.coverflow-card .media-failed { padding: 18px; }
 .inline-viewer .viewer-info {
   padding-left: 7px;
   padding-right: 5px;
@@ -1674,7 +1752,7 @@ input[type="range"] {
     aspect-ratio: 4/3;
     max-height: 65dvh;
   }
-  .inline-viewer .viewer-stage {
+  .inline-viewer .viewer-stage:not(.coverflow-stage) {
     aspect-ratio: 16/10;
     max-height: 580px;
   }

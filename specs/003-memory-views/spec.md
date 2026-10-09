@@ -28,6 +28,8 @@ Biblioteca vacía, contenido eliminado, sesión expirada, archivo inválido, pan
 - **FR-002**: Permitir siguiente/anterior, gesto horizontal y presentación automática con pausa.
 - **FR-003**: Abrir foto/video en visor accesible con Escape, controles y navegación por teclado.
 - **FR-004**: Respetar movimiento reducido, pausar al ocultar la pestaña y evitar reproducir videos automáticamente.
+- **FR-005**: En la vista carrusel, mostrar la foto central grande y hasta dos recuerdos inclinados a cada lado, con profundidad y transición suave circular inspirada en la referencia del usuario del 2026-10-08. Mantener celeste/rosado, acceso al original completo y videos pausados al cambiar de recuerdo.
+- **FR-006**: Permitir seleccionar recuerdos laterales, navegar con flechas o gesto horizontal sin interceptar el scroll vertical; desactivar transiciones y presentación bajo movimiento reducido. Resolver sin duplicados bibliotecas de uno o dos recuerdos.
 
 ### Key Entities
 ViewPreference: vista elegida local; SlideshowState: índice y pausa, efímero.
@@ -39,6 +41,7 @@ ViewPreference: vista elegida local; SlideshowState: índice y pausa, efímero.
 - **SC-002**: Cero lecturas de contenido privado sin autenticación en las pruebas de integración.
 - **SC-003**: Sin desbordamiento horizontal a 390 px; controles táctiles de al menos 44 px.
 - **SC-004**: Verificación automatizada de los contratos sensibles y registro de validación manual.
+- **SC-005**: Verificar transición, vuelta del último al primero, selección lateral, videos y movimiento reducido en móvil y escritorio; sin desbordamiento a 360 px.
 
 ## Assumptions
 - Una pareja, un servidor y contraseña compartida; no registro público.

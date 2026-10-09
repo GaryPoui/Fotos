@@ -21,3 +21,11 @@ Código: src/components/Gallery.tsx, src/components/Viewer.tsx, src/styles.css.
 Compartido: server/, src/components/, tests/, scripts/, docs/.
 ## Complexity Tracking
 Sin violaciones. Se evita backend externo y autenticación de terceros.
+
+## Ajuste visual 2026-10-08
+Implementar Coverflow.tsx como escenario del Viewer inline: tarjetas con claves estables por UUID,
+distancia circular al centro, transformaciones CSS perspective/rotateY/translateZ/scale y transición de 550 ms.
+Renderizar sólo vecinos próximos; usar miniaturas privadas y videos con metadata sin autoplay.
+Pausar el video saliente. Mantener visor modal completo y acciones existentes. Sin nueva dependencia.
+Gestos distinguen horizontal/vertical; flechas de teclado limitadas al escenario enfocado.
+Verificar con Playwright y capturas sintéticas, compilar, commit/push y desplegar Render Free.
