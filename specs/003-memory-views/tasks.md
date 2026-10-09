@@ -12,7 +12,7 @@
 - [X] T005 [US1] Verificar recorridos y vista de 390 px en tests/e2e.spec.ts y docs/verification.md
 - [X] T006 [US1] Implementar escenario con profundidad, transición y selección lateral en src/components/Coverflow.tsx y src/styles.css; integrar en Viewer.tsx conservando visor completo, pausa de video y gestos accesibles.
 - [X] T007 [US1] Verificar vuelta circular, pocos recuerdos, teclado, toque, video, movimiento reducido y diseño móvil/escritorio; registrar evidencia, build, commit y push; publicar en Render Free.
-- [ ] T008 [US1] Iniciar carrusel automáticamente cada 7 segundos en Viewer.tsx, verificar avance y pausa en navegador, compilar y publicar en Render.
+- [X] T008 [US1] Iniciar carrusel automáticamente cada 7 segundos en Viewer.tsx, verificar avance y pausa en navegador, compilar y publicar en Render.
 ## Dependencies & Execution Order
 T001 primero; tareas en orden. 001 → 002 → 003; 004/005 dependen de 001/002; 006 cierra integración.
 ## Parallel opportunities

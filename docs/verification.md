@@ -139,3 +139,5 @@ Evidencia local en test-results/ (ignorada por Git).
 - Spec 003 FR-007: carrusel inline inicia presentación automáticamente, intervalo de 7000 ms; conserva pausa manual/interacción/video/pestaña oculta y respeta movimiento reducido. Visor ampliado inicia pausado.
 - Build/tipos PASS; cuatro recorridos de galería/carrusel móvil y escritorio PASS, incluido avance automático real y pausa. Publicación pendiente.
 - Se detectó en CI Linux que scrollIntoView sobre la caja proyectada de una tarjeta lateral desplazaba el escenario con overflow:hidden. Se cambió a overflow:clip y la prueba toca su superficie expuesta real; recorridos de carrusel móvil/escritorio PASS tras corregir.
+- Publicación final 8093013 en Render: Live. Prueba pública móvil/escritorio: inicio automático, avance a los 7 segundos, pausa y layout PASS; capturas render-autoplay-mobile.png y render-autoplay-desktop.png. Datos demo interceptados localmente, sin modificar recuerdos personales.
+- GitHub Actions 37874928340: integración, build y recorrido completo de navegador en Linux PASS; compilación Docker en curso al registrar esta evidencia.
