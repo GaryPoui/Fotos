@@ -1071,6 +1071,7 @@ main {
     radial-gradient(ellipse at 80% 35%, #f8e3ed99, transparent 60%);
   perspective: 1100px;
   isolation: isolate;
+  overflow: clip;
 }
 .coverflow-track {
   position: absolute;

@@ -138,3 +138,4 @@ Evidencia local en test-results/ (ignorada por Git).
 ## Presentación automática cada 7 segundos (2026-10-08)
 - Spec 003 FR-007: carrusel inline inicia presentación automáticamente, intervalo de 7000 ms; conserva pausa manual/interacción/video/pestaña oculta y respeta movimiento reducido. Visor ampliado inicia pausado.
 - Build/tipos PASS; cuatro recorridos de galería/carrusel móvil y escritorio PASS, incluido avance automático real y pausa. Publicación pendiente.
+- Se detectó en CI Linux que scrollIntoView sobre la caja proyectada de una tarjeta lateral desplazaba el escenario con overflow:hidden. Se cambió a overflow:clip y la prueba toca su superficie expuesta real; recorridos de carrusel móvil/escritorio PASS tras corregir.

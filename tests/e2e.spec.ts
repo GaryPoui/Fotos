@@ -597,7 +597,20 @@ test("coverflow: circular navigation, side selection, swipe, keyboard and reduce
     await stage.focus();
     await page.keyboard.press('ArrowRight');
     await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
-    await stage.getByRole('button', {name:'Ir a Demo carrusel 4',exact:true}).click();
+    const side = stage.getByRole('button', {name:'Ir a Demo carrusel 4',exact:true});
+    // A perspective card overlaps its neighbors: click its exposed surface,
+    // rather than scrolling its projected bounding box into the clipped stage.
+    await expect.poll(()=>side.evaluate(el=>el.parentElement!.getAnimations().length)).toBe(0);
+    const sidePoint = await side.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      for(const y of [.25,.75,.5]) for(const x of [.25,.5,.75]) {
+        const point = {x:rect.left+rect.width*x,y:rect.top+rect.height*y};
+        if(document.elementFromPoint(point.x,point.y)===el) return point;
+      }
+      return null;
+    });
+    expect(sidePoint, 'La tarjeta lateral ofrece una superficie visible para tocar').not.toBeNull();
+    await page.mouse.click(sidePoint!.x,sidePoint!.y);
     await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 4');
     await stage.evaluate(el => { const event = new Event('touchstart', {bubbles:true}); Object.defineProperty(event, 'touches', {value:[{clientX:230,clientY:200}]}); el.dispatchEvent(event); });
     await stage.evaluate(el => { const event = new Event('touchend', {bubbles:true}); Object.defineProperty(event, 'changedTouches', {value:[{clientX:100,clientY:210}]}); el.dispatchEvent(event); });

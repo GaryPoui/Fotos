@@ -31,3 +31,5 @@ Gestos distinguen horizontal/vertical; flechas de teclado limitadas al escenario
 Verificar con Playwright y capturas sintéticas, compilar, commit/push y desplegar Render Free.
 La presentación inline comienza activa (excepto movimiento reducido o un solo recuerdo), con intervalo
 de 7000 ms; se conserva la pausa existente por interacción, reproducción de video y pestaña oculta.
+El escenario recorta con overflow:clip para evitar desplazamientos internos hacia tarjetas 3D fuera del borde.
+La prueba de selección lateral toca una superficie expuesta real, respetando la superposición por perspectiva.
