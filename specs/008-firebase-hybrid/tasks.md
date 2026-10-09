@@ -1,0 +1,11 @@
+# Tasks 008
+- [X] T001 Revisar proyecto Spark, Firestore Standard y documentación oficial; definir alternativa autorizada.
+- [X] T002 Implementar adaptador Firebase Auth/Firestore conservando UI/local.
+- [X] T003 Implementar Storage privado, miniaturas, reservas y compensación.
+- [X] T004 Implementar proxy service worker autenticado con Range y sin caché privada.
+- [X] T005 Escribir y validar reglas Firestore y políticas SQL/Storage.
+- [X] T006 Configurar Auth/Hosting y cuenta privada sin secretos en Git.
+- [X] T007 Ejecutar regresión, integración/emulador y navegador; documentar evidencia.
+- [X] T008 Configurar Supabase Free real con integración Firebase; verificar bucket y cuotas.
+- [X] T009 Publicar y verificar HTTPS, login, carta, foto, rangos, logout y persistencia real.
+- [X] T010 Documentar límites, respaldos, commit y publicación de código.

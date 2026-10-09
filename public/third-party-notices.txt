@@ -1,0 +1,15 @@
+Nuestro rincón — conversión de imágenes y archivos
+
+heic-to 1.6.5: Copyright Hopper Gee, LGPL-3.0.
+Fuente, licencia y scripts de construcción: https://github.com/hoppergee/heic-to/tree/v1.6.5
+https://github.com/hoppergee/heic-to/blob/main/LICENSE
+Basado en libheif 1.23.5 y sus codecs. Código y licencias:
+https://github.com/strukturag/libheif/tree/v1.23.5
+El módulo de conversión se distribuye separado y se carga al seleccionar HEIC.
+No se modificó el código de estas bibliotecas.
+
+fflate 0.8.3: Copyright Arjun Barrett, MIT.
+https://github.com/101arrowz/fflate/blob/master/LICENSE
+
+tus-js-client 4.3.1: MIT, proyecto tus.
+https://github.com/tus/tus-js-client/blob/main/LICENSE

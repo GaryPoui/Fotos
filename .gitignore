@@ -17,3 +17,9 @@ test-results/
 Thumbs.db
 
 dist-server/
+
+dist-cloud/
+supabase/.temp/
+supabase/.branches/
+
+.firebase/

@@ -283,13 +283,11 @@ test("video uploads privately and opens paused with working playback", async ({
   await page
     .getByRole("button", { name: "Subir recuerdos", exact: true })
     .click();
-  await page
-    .getByLabel("Fotos y videos", { exact: true })
-    .setInputFiles({
-      name: "recuerdo.webm",
-      mimeType: "video/webm",
-      buffer: Buffer.from(recording),
-    });
+  await page.getByLabel("Fotos y videos", { exact: true }).setInputFiles({
+    name: "recuerdo.webm",
+    mimeType: "video/webm",
+    buffer: Buffer.from(recording),
+  });
   await page.getByLabel("Título", { exact: true }).fill(title);
   await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -308,4 +306,247 @@ test("video uploads privately and opens paused with working playback", async ({
     .toBeGreaterThan(0);
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await assertFits(page);
+});
+
+test("private backup downloads original, thumbnail and readable metadata", async ({
+  page,
+}, info) => {
+  await login(page);
+  await uploadPhoto(page, "Respaldo " + info.project.name);
+  await page
+    .getByRole("button", { name: "Personalizar nuestro rincón" })
+    .click();
+  await page
+    .getByRole("button", { name: "Descargar una copia de nuestros recuerdos" })
+    .click();
+  const waiting = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Descargar nuestros recuerdos", exact: true })
+    .click();
+  const download = await waiting;
+  expect(download.suggestedFilename()).toContain("parte-1-de-1.zip");
+  const { unzipSync, strFromU8 } = await import("fflate");
+  const files = unzipSync(readFileSync((await download.path())!));
+  const manifest = JSON.parse(strFromU8(files["recuerdos.json"]));
+  const photo = manifest.media.find(
+    (m: { title: string }) => m.title === "Respaldo " + info.project.name,
+  );
+  expect(photo).toBeTruthy();
+  expect(files["archivos/" + photo.id + "/original.png"]).toEqual(
+    new Uint8Array(png),
+  );
+  expect(
+    files["archivos/" + photo.id + "/miniatura.webp"].length,
+  ).toBeGreaterThan(0);
+  await expect(
+    page.getByText("Todas las partes están preparadas.", { exact: false }),
+  ).toBeVisible();
+  await assertFits(page);
+});
+
+test("interrupted upload restores its draft after reload without duplicating a committed file", async ({
+  page,
+}, info) => {
+  await login(page);
+  const title = "Retomar " + info.project.name;
+  await page.route(
+    "**/api/media",
+    async (route) => {
+      if (route.request().method() === "POST") {
+        await route.fetch();
+        await route.abort("internetdisconnected");
+      } else await route.continue();
+    },
+    { times: 1 },
+  );
+  await page
+    .getByRole("button", { name: "Subir recuerdos", exact: true })
+    .click();
+  await page
+    .getByLabel("Fotos y videos", { exact: true })
+    .setInputFiles({ name: "cielo.png", mimeType: "image/png", buffer: png });
+  await page.getByLabel("Título", { exact: true }).fill(title);
+  await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
+  await expect(page.getByRole("alert")).toContainText("Algunos archivos");
+  await page.reload();
+  await page.getByRole("heading", { name: /Nuestros momentos/ }).waitFor();
+  await page
+    .getByRole("button", { name: "Retomar 1 recuerdo", exact: true })
+    .click();
+  await expect(
+    page.getByText("Recuperamos tu tanda pendiente.", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Título", { exact: true })).toHaveValue(title);
+  await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const library = await (await page.request.get("/api/library")).json();
+  expect(
+    library.media.filter((m: { title: string }) => m.title === title),
+  ).toHaveLength(1);
+  await page
+    .getByRole("button", { name: "Subir recuerdos", exact: true })
+    .click();
+  await expect(
+    page.getByText("Recuperamos tu tanda pendiente.", { exact: false }),
+  ).toHaveCount(0);
+});
+
+test("iPhone HEIC converts on device into a private viewable JPEG", async ({
+  page,
+}, info) => {
+  await login(page);
+  const title = "HEIC " + info.project.name;
+  await page
+    .getByRole("button", { name: "Subir recuerdos", exact: true })
+    .click();
+  await page.getByLabel("Fotos y videos", { exact: true }).setInputFiles({
+    name: "colores.heic",
+    mimeType: "image/heic",
+    buffer: readFileSync(new URL("./fixtures/cielo.heic", import.meta.url)),
+  });
+  await page.getByLabel("Título", { exact: true }).fill(title);
+  await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const library = await (await page.request.get("/api/library")).json();
+  const photo = library.media.find((m: { title: string }) => m.title === title);
+  expect(photo.mime).toBe("image/jpeg");
+  const original = await page.request.get("/api/files/" + photo.id);
+  expect(original.headers()["content-type"]).toContain("image/jpeg");
+  await page
+    .getByRole("button", { name: "Abrir " + title, exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      page
+        .locator("dialog img")
+        .first()
+        .evaluate((i: HTMLImageElement) => i.naturalWidth),
+    )
+    .toBeGreaterThan(0);
+});
+
+test("personal cover, calendar counter and featured memory persist after reload", async ({
+  page,
+}, info) => {
+  await login(page);
+  const title = "Portada " + info.project.name;
+  await uploadPhoto(page, title);
+  await page
+    .getByRole("button", { name: "Personalizar nuestro rincón" })
+    .click();
+  await page.getByLabel("Juntos desde", { exact: true }).fill("2020-01-01");
+  await page
+    .getByLabel("Foto de portada", { exact: true })
+    .selectOption({ label: title });
+  await page
+    .getByLabel("Recuerdo destacado", { exact: true })
+    .selectOption({ label: title });
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page
+      .getByRole("button", { name: "Ver nuestra foto de portada" })
+      .locator("img"),
+  ).toHaveAttribute("alt", title);
+  await expect(page.locator(".days-together")).toContainText("días juntos");
+  await page
+    .getByRole("button", { name: "Revivir " + title, exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await assertFits(page);
+  await page.screenshot({
+    path: "test-results/personal-cover-" + info.project.name + ".png",
+    fullPage: true,
+  });
+});
+
+test("same-day memories and album cards navigate real dated photos", async ({
+  page,
+}, info) => {
+  await login(page);
+  const now = new Date(),
+    day = [
+      now.getFullYear() - 4,
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+  const title = "Nuestro día " + info.project.name;
+  await page
+    .getByRole("button", { name: "Subir recuerdos", exact: true })
+    .click();
+  await page
+    .getByLabel("Fotos y videos", { exact: true })
+    .setInputFiles({ name: "cielo.png", mimeType: "image/png", buffer: png });
+  await page.getByLabel("Título", { exact: true }).fill(title);
+  await page.getByLabel("Fecha del recuerdo", { exact: true }).fill(day);
+  await page.getByRole("button", { name: "Aniversarios", exact: true }).click();
+  await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Volver a " + title, exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Ver todos los recuerdos de este día" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Abrir " + title, exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Quitar filtro de fecha o álbum" })
+    .click();
+  await page
+    .getByRole("button", { name: "Ver álbum Aniversarios", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Ver álbum Aniversarios", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Álbum: Aniversarios" }),
+  ).toBeVisible();
+  await assertFits(page);
+});
+
+test("logout removes private pending files and TUS references from the device", async ({
+  page,
+}) => {
+  await login(page);
+  await page
+    .getByRole("button", { name: "Subir recuerdos", exact: true })
+    .click();
+  await page
+    .getByLabel("Fotos y videos", { exact: true })
+    .setInputFiles({
+      name: "pendiente.png",
+      mimeType: "image/png",
+      buffer: png,
+    });
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Retomar 1 recuerdo", exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() => localStorage.setItem("tus::rincon-test::1", "{}"));
+  await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  await page.getByLabel("Nuestra contraseña").waitFor();
+  expect(
+    await page.evaluate(() => localStorage.getItem("tus::rincon-test::1")),
+  ).toBeNull();
+  const count = await page.evaluate(
+    () =>
+      new Promise<number>((resolve, reject) => {
+        const open = indexedDB.open("rincon-pending-uploads", 1);
+        open.onsuccess = () => {
+          const db = open.result,
+            request = db.transaction("drafts").objectStore("drafts").count();
+          request.onsuccess = () => {
+            resolve(request.result);
+            db.close();
+          };
+          request.onerror = reject;
+        };
+        open.onerror = reject;
+      }),
+  );
+  expect(count).toBe(0);
 });

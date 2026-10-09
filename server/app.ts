@@ -64,6 +64,8 @@ const settingsInput = z
     names: z.string().trim().min(1).max(100),
     title: z.string().trim().min(1).max(80),
     since: z.union([date, z.literal("")]),
+    coverId: z.union([z.string().uuid(), z.literal("")]).optional(),
+    featuredId: z.union([z.string().uuid(), z.literal("")]).optional(),
   })
   .strict();
 class ApiError extends Error {
@@ -181,6 +183,7 @@ export async function createApp(options: AppOptions) {
     helmet({
       contentSecurityPolicy: {
         directives: {
+          workerSrc: ["'self'", "blob:"],
           "img-src": ["'self'", "blob:", "data:"],
           "media-src": ["'self'", "blob:"],
         },
@@ -377,6 +380,22 @@ export async function createApp(options: AppOptions) {
     });
     await previousUpload;
     try {
+      const suppliedId = req.get("X-Upload-Id");
+      if (
+        suppliedId &&
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
+          suppliedId,
+        )
+      )
+        throw new ApiError(400, "Identificador de subida inválido.");
+      const uploadId = suppliedId || randomUUID();
+      const existing = await db
+        .prepare("SELECT * FROM media WHERE id=?")
+        .get(uploadId);
+      if (existing) {
+        res.status(200).json(publicMedia(existing as unknown as MediaRow));
+        return;
+      }
       const input = mediaInput.parse({
         title:
           req.body.title ||
@@ -400,7 +419,7 @@ export async function createApp(options: AppOptions) {
           413,
           "El espacio está lleno. Borrá algún archivo o ampliá el almacenamiento.",
         );
-      const id = randomUUID(),
+      const id = uploadId,
         filename = id + "." + detected.ext;
       if (detected.kind === "photo") {
         thumb = join(mediaDir, id + ".thumb.webp");

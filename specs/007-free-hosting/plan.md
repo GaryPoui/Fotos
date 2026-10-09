@@ -24,3 +24,9 @@ Privacidad: pasa, ningún secreto al cliente, RLS en tablas y bucket privado. Pe
 - docs/free-hosting.md: configuración, límites, respaldo y publicación real.
 ## Complexity Tracking
 Dos proveedores son necesarios: Render Free no conserva disco; Supabase Free provee datos y objetos persistentes. No se reemplaza la implementación local.
+
+## Alternativa vigente
+El 2026-10-08 el usuario eligió Firebase parcial + proveedor gratuito. Ver spec 008; las tareas Render/PostgreSQL de esta alternativa no se ejecutan ni se marcan completas.
+
+## Selección actual
+El usuario volvió a elegir explícitamente Render Free + Supabase Free y contraseña propia el 2026-10-08. Se ejecutan las tareas de spec 007 y se conservan las mejoras de 008/009. Bucket rincon-render separado para preservar archivos y políticas de la publicación anterior.

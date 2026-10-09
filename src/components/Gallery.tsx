@@ -15,19 +15,26 @@ import {
 import type { Media } from "../../shared/types";
 import { api, formatDate, mediaUrl } from "../lib";
 import { Confirm, Dialog } from "./Dialog";
+import { Revisit } from "./Revisit";
+import { onThisDay } from "../moments";
 import { Viewer } from "./Viewer";
 type View = "grid" | "timeline" | "carousel";
 export function Gallery({
   items,
+  requestedMemory,
+  calendarToday,
   onUpload,
   onChanged,
   onError,
 }: {
   items: Media[];
+  requestedMemory?: { id: string; nonce: number };
+  calendarToday: string;
   onUpload: () => void;
   onChanged: (m: string) => Promise<void>;
   onError: (e: string) => void;
 }) {
+  const [dayOnly, setDayOnly] = useState(false);
   const [query, setQuery] = useState(""),
     [album, setAlbum] = useState(""),
     [kind, setKind] = useState(""),
@@ -45,11 +52,22 @@ export function Gallery({
   const [selected, setSelected] = useState<string | null>(null),
     [editing, setEditing] = useState<Media | null>(null),
     [deleting, setDeleting] = useState<Media | null>(null);
+  useEffect(() => {
+    if (requestedMemory && items.some((i) => i.id === requestedMemory.id)) {
+      setQuery("");
+      setAlbum("");
+      setKind("");
+      setFavorites(false);
+      setDayOnly(false);
+      setSelected(requestedMemory.id);
+    }
+  }, [requestedMemory]);
   const filtered = useMemo(
     () =>
       items
         .filter(
           (item) =>
+            (!dayOnly || onThisDay([item], calendarToday).length > 0) &&
             (!album || item.album === album) &&
             (!kind || item.kind === kind) &&
             (!favorites || item.favorite) &&
@@ -63,7 +81,7 @@ export function Gallery({
             ? a.date.localeCompare(b.date)
             : b.date.localeCompare(a.date),
         ),
-    [items, album, kind, favorites, query, sort],
+    [items, album, kind, favorites, query, sort, dayOnly, calendarToday],
   );
   const albums = [...new Set(items.map((i) => i.album).filter(Boolean))].sort();
   useEffect(() => {
@@ -125,6 +143,49 @@ export function Gallery({
   );
   return (
     <>
+      <Revisit
+        items={items}
+        today={calendarToday}
+        album={album}
+        onOpen={(id) => {
+          setQuery("");
+          setAlbum("");
+          setKind("");
+          setFavorites(false);
+          setDayOnly(false);
+          setSelected(id);
+        }}
+        onAlbum={(name) => {
+          setAlbum(name);
+          setDayOnly(false);
+          setQuery("");
+          setKind("");
+          setFavorites(false);
+        }}
+        onDay={() => {
+          setDayOnly(true);
+          setAlbum("");
+          setQuery("");
+          setKind("");
+          setFavorites(false);
+        }}
+      />
+      {(dayOnly || album) && (
+        <div className="active-memory-filter" role="status">
+          <span>{dayOnly ? "Un día como hoy" : "Álbum: " + album}</span>
+          <button
+            className="icon-button"
+            aria-label="Quitar filtro de fecha o álbum"
+            onClick={() => {
+              setDayOnly(false);
+              setAlbum("");
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <div className="gallery-toolbar">
         <div className="searchbox">
           <Search size={18} />
@@ -262,6 +323,7 @@ export function Gallery({
               setAlbum("");
               setKind("");
               setFavorites(false);
+              setDayOnly(false);
             }}
           >
             Ver todos los recuerdos

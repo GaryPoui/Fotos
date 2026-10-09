@@ -1,0 +1,58 @@
+import { chromium } from "playwright";
+import { readFileSync } from "node:fs";
+try {
+  process.loadEnvFile();
+} catch {}
+const b = await chromium.launch(),
+  p = await b.newPage({ viewport: { width: 390, height: 844 } });
+p.setDefaultTimeout(30000);
+const title = "Prueba HEIC " + Date.now(),
+  errors = [];
+p.on("pageerror", (e) => errors.push(e.message));
+try {
+  await p.goto(process.argv[2]);
+  await p.getByLabel("Nuestra contraseña").fill(process.env.APP_PASSWORD);
+  await p.getByRole("button", { name: "Entrar a nuestro rincón" }).click();
+  await p.getByRole("button", { name: "Subir recuerdos", exact: true }).click();
+  await p
+    .getByLabel("Fotos y videos", { exact: true })
+    .setInputFiles({
+      name: "colores.heic",
+      mimeType: "image/heic",
+      buffer: readFileSync("tests/fixtures/cielo.heic"),
+    });
+  await p.getByLabel("Título", { exact: true }).fill(title);
+  await p.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
+  await p.getByRole("dialog").waitFor({ state: "hidden" });
+  await p.reload();
+  const card = p.getByRole("button", { name: "Abrir " + title, exact: true });
+  await card.waitFor();
+  const src = await card.locator("img").getAttribute("src");
+  const result = await p.evaluate(async (path) => {
+    const r = await fetch(path.replace("?thumb=1", ""));
+    return {
+      status: r.status,
+      mime: r.headers.get("Content-Type"),
+      size: (await r.arrayBuffer()).byteLength,
+    };
+  }, src);
+  if (
+    result.status !== 200 ||
+    result.mime !== "image/jpeg" ||
+    result.size < 100
+  )
+    throw new Error("Converted JPEG failed");
+  await card.click();
+  await p.getByRole("button", { name: "Eliminar recuerdo" }).click();
+  await p.getByRole("button", { name: "Eliminar", exact: true }).click();
+  await p.getByRole("dialog").waitFor({ state: "hidden" });
+  if (errors.length) throw new Error(JSON.stringify(errors));
+  console.log(
+    "HEIC decoded locally under CSP, uploaded private JPEG, reload and cleanup: PASS",
+  );
+} catch (e) {
+  console.error((await p.locator("body").innerText()).slice(-800));
+  throw e;
+} finally {
+  await b.close();
+}

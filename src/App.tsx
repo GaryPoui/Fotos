@@ -1,3 +1,4 @@
+import { cloudEnabled, storageReady } from "./cloud/config";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Heart,
@@ -14,7 +15,9 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import type { Library, Media, Note, Settings } from "../shared/types";
-import { api, bytes } from "./lib";
+import { api, bytes, today } from "./lib";
+import { PendingUploads } from "./components/PendingUploads";
+import { MemoryHome } from "./components/MemoryHome";
 import { Gallery } from "./components/Gallery";
 import { UploadDialog } from "./components/UploadDialog";
 import { Music } from "./components/Music";
@@ -22,10 +25,29 @@ import { Player } from "./components/Player";
 import { Notes } from "./components/Notes";
 import { NoteDialog } from "./components/NoteDialog";
 import { Dialog } from "./components/Dialog";
+import { clearUploads, discardPendingUploads } from "./upload-queue";
+import { BackupDialog } from "./components/BackupDialog";
 type Page = "memories" | "music" | "words";
 export default function App() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [library, setLibrary] = useState<Library | null>(null);
+  const [calendarToday, setCalendarToday] = useState(today);
+  const [requestedMemory, setRequestedMemory] = useState<
+    { id: string; nonce: number } | undefined
+  >();
+  const openMemory = (id: string) => {
+    setPage("memories");
+    setRequestedMemory({ id, nonce: Date.now() });
+  };
+  useEffect(() => {
+    const update = () => setCalendarToday(today());
+    const timer = setInterval(update, 60000);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
   const [page, setPage] = useState<Page>("memories");
   const [error, setError] = useState(""),
     [toast, setToast] = useState("");
@@ -34,6 +56,7 @@ export default function App() {
   );
   const [noteEdit, setNoteEdit] = useState<Note | "new" | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
   const [playRequest, setPlayRequest] = useState(0);
   const refresh = useCallback(async () => {
@@ -56,12 +79,14 @@ export default function App() {
   }, [authenticated, refresh]);
   useEffect(() => {
     const handler = () => {
+      void clearUploads().catch(() => {});
       setAuthenticated(false);
       setLibrary(null);
       setSelectedTrack(null);
       setUploadType(null);
       setNoteEdit(null);
       setSettingsOpen(false);
+      setBackupOpen(false);
       setError("La sesión terminó. Volvé a ingresar.");
     };
     window.addEventListener("session-expired", handler);
@@ -76,7 +101,10 @@ export default function App() {
     try {
       await refresh();
     } catch (e) {
-      setError("El cambio se guardó, pero no pudimos actualizar la vista. Recargá la página cuando vuelva la conexión. " + (e as Error).message);
+      setError(
+        "El cambio se guardó, pero no pudimos actualizar la vista. Recargá la página cuando vuelva la conexión. " +
+          (e as Error).message,
+      );
     }
     notify(message);
   };
@@ -137,7 +165,12 @@ export default function App() {
             aria-label="Cerrar sesión"
             onClick={async () => {
               try {
+                const cleaned = await discardPendingUploads();
                 await api("/logout", "POST");
+                if (!cleaned)
+                  setError(
+                    "La sesión se cerró. No pudimos liberar todo el espacio de las subidas pendientes; revisá el almacenamiento cuando vuelva la conexión.",
+                  );
                 setAuthenticated(false);
                 setLibrary(null);
                 setSelectedTrack(null);
@@ -151,6 +184,13 @@ export default function App() {
         </div>
       </header>
       <main id="contenido">
+        {cloudEnabled && !storageReady && (
+          <p className="error-banner" role="status">
+            Estamos preparando el álbum online. Ya podés guardar cartas y
+            personalizar nuestro rincón; las fotos y canciones estarán
+            disponibles al terminar la configuración.
+          </p>
+        )}
         {error && (
           <div role="alert" className="error-banner">
             <span>{error}</span>
@@ -170,52 +210,58 @@ export default function App() {
           </div>
         ) : (
           <>
-            <section className={"intro intro-" + page}>
-              <div>
-                <span className="eyebrow">
-                  <Sparkles size={14} /> {library.settings.names}
-                </span>
-                <h1>
-                  {page === "memories" ? (
-                    <>
-                      Los días pasan.
-                      <br />
-                      <em>Lo nuestro queda.</em>
-                    </>
-                  ) : page === "music" ? (
-                    <>
-                      Hay canciones
-                      <br />
-                      <em>que suenan a Ailu.</em>
-                    </>
-                  ) : (
-                    <>
-                      Lo que sentimos,
-                      <br />
-                      <em>en palabras.</em>
-                    </>
-                  )}
-                </h1>
-                <p>
-                  {page === "memories"
-                    ? "Fotos, pequeños instantes y todo eso que nos hace sonreír."
-                    : page === "music"
+            <PendingUploads
+              revision={uploadType || "closed"}
+              onResume={setUploadType}
+            />
+            {page === "memories" ? (
+              <MemoryHome
+                items={library.media.filter((m) => m.kind !== "audio")}
+                settings={library.settings}
+                today={calendarToday}
+                onOpen={openMemory}
+                onPersonalize={() => setSettingsOpen(true)}
+              />
+            ) : (
+              <section className={"intro intro-" + page}>
+                <div>
+                  <span className="eyebrow">
+                    <Sparkles size={14} /> {library.settings.names}
+                  </span>
+                  <h1>
+                    {page === "music" ? (
+                      <>
+                        Hay canciones
+                        <br />
+                        <em>que suenan a Ailu.</em>
+                      </>
+                    ) : (
+                      <>
+                        Lo que sentimos,
+                        <br />
+                        <em>en palabras.</em>
+                      </>
+                    )}
+                  </h1>
+                  <p>
+                    {page === "music"
                       ? "La banda sonora de nuestra historia. Dale play a un recuerdo."
                       : "Cartas para leer despacito y frases para guardar cerquita."}
-                </p>
-              </div>
-              <div className="intro-art" aria-hidden="true">
-                <div className="paper sky">
-                  <Cloud />
-                  <span>Ailu</span>
+                  </p>
                 </div>
-                <div className="paper blush">
-                  <Heart />
-                  <span>Tomy</span>
+                <div className="intro-art" aria-hidden="true">
+                  <div className="paper sky">
+                    <Cloud />
+                    <span>Ailu</span>
+                  </div>
+                  <div className="paper blush">
+                    <Heart />
+                    <span>Tomy</span>
+                  </div>
+                  <span className="art-spark">✧</span>
                 </div>
-                <span className="art-spark">✧</span>
-              </div>
-            </section>
+              </section>
+            )}
             <div className="section-heading">
               <div>
                 <span className="eyebrow">
@@ -259,6 +305,8 @@ export default function App() {
             {page === "memories" && (
               <Gallery
                 items={library.media.filter((m) => m.kind !== "audio")}
+                requestedMemory={requestedMemory}
+                calendarToday={calendarToday}
                 onUpload={() => setUploadType("memories")}
                 onChanged={changed}
                 onError={setError}
@@ -349,9 +397,15 @@ export default function App() {
           onChanged={changed}
         />
       )}
+      {backupOpen && <BackupDialog onClose={() => setBackupOpen(false)} />}
       {settingsOpen && library && (
         <SettingsDialog
           settings={library.settings}
+          items={library.media.filter((m) => m.kind !== "audio")}
+          onBackup={() => {
+            setSettingsOpen(false);
+            setBackupOpen(true);
+          }}
           onClose={() => setSettingsOpen(false)}
           onChanged={changed}
         />
@@ -418,9 +472,18 @@ function Login({
             <strong>Las pistas de nuestra llave</strong>
             <p>Escribila toda de corrido, en minúsculas y sin espacios.</p>
             <ol>
-              <li>Los primeros dígitos son un número muy importante para los dos y de un pilotito que se parece un poquito a mí.</li>
-              <li>La segunda palabra es el lugar donde nos conocimos y nos comimos.</li>
-              <li>La tercera es mi forma favorita de llamarte, es de tu color favorito y, si mirás para arriba, lo ves.</li>
+              <li>
+                Los primeros dígitos son un número muy importante para los dos y
+                de un pilotito que se parece un poquito a mí.
+              </li>
+              <li>
+                La segunda palabra es el lugar donde nos conocimos y nos sacamos
+                nuestra primera foto, desde ese momento nunca te dejé de amar.
+              </li>
+              <li>
+                La tercera es mi forma favorita de llamarte, es de tu color
+                favorito y, si mirás para arriba, lo ves.
+              </li>
             </ol>
           </div>
           {error && (
@@ -450,10 +513,14 @@ function Login({
 }
 function SettingsDialog({
   settings,
+  items,
+  onBackup,
   onClose,
   onChanged,
 }: {
   settings: Settings;
+  items: Media[];
+  onBackup: () => void;
   onClose: () => void;
   onChanged: (m: string) => Promise<void>;
 }) {
@@ -462,6 +529,13 @@ function SettingsDialog({
     [busy, setBusy] = useState(false);
   return (
     <Dialog title="Nuestro toque personal" onClose={onClose} busy={busy}>
+      <button
+        className="button secondary full-width"
+        disabled={busy}
+        onClick={onBackup}
+      >
+        Descargar una copia de nuestros recuerdos
+      </button>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -502,6 +576,38 @@ function SettingsDialog({
             value={value.since}
             onChange={(e) => setValue({ ...value, since: e.target.value })}
           />
+        </label>
+        <label>
+          Foto de portada
+          <select
+            aria-label="Foto de portada"
+            value={value.coverId || ""}
+            onChange={(e) => setValue({ ...value, coverId: e.target.value })}
+          >
+            <option value="">Automática: favorita o más reciente</option>
+            {items
+              .filter((i) => i.kind === "photo")
+              .map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.title}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label>
+          Recuerdo destacado
+          <select
+            aria-label="Recuerdo destacado"
+            value={value.featuredId || ""}
+            onChange={(e) => setValue({ ...value, featuredId: e.target.value })}
+          >
+            <option value="">Automático: favorito o más reciente</option>
+            {items.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.title}
+              </option>
+            ))}
+          </select>
         </label>
         {error && (
           <p role="alert" className="form-error">

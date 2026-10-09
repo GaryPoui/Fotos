@@ -1,5 +1,7 @@
 # Publicar nuestro rincón
 
+La modalidad vigente elegida es Render Free + Supabase Free. Se conserva la guía de [Firebase anterior](firebase-hosting.md) como referencia.
+
 Esta aplicación necesita **un servidor Node y persistencia local o remota**. Para presupuesto cero,
 seguir [Render Free + Supabase Free](free-hosting.md). GitHub Pages y un hosting
 estático no guardan recuerdos ni ejecutan esta API. El repo incluye Docker; no depende de Sites.

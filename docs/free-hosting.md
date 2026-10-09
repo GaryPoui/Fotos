@@ -6,14 +6,14 @@ No se compra dominio, disco ni plan de pago. El subdominio onrender.com incluye 
 
 ## Configuración
 1. Crear o reutilizar un proyecto Supabase Free. Ejecutar supabase/schema.sql mediante conexión administrativa.
-2. Usar un bucket **privado** llamado rincon, máximo por archivo 50.000.000 bytes. No agregar políticas anónimas a Storage.
+2. Usar un bucket **privado** llamado rincon-render, máximo por archivo 50.000.000 bytes. No agregar políticas anónimas a Storage.
 3. Configurar DATABASE_URL con Session pooler (IPv4, 5432). Recomendado: rol servidor dedicado con permisos CRUD
    sólo sobre rincon y políticas RLS exclusivas para ese rol; no otorgar permisos a anon/authenticated.
    Alternativamente se admite conexión administrativa, que debe mantenerse sólo en backend.
 4. Usar TLS con verificación. DATABASE_CA acepta el certificado PEM de Supabase o una ruta al archivo.
    Descargar CA desde Connect/Database settings; no configurar rejectUnauthorized=false.
 5. Configurar SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY (service_role o secret server key), sólo backend.
-   Nunca prefijo VITE_, repositorio, mensajes públicos ni frontend. SUPABASE_BUCKET=rincon.
+   Nunca prefijo VITE_, repositorio, mensajes públicos ni frontend. SUPABASE_BUCKET=rincon-render.
 6. Crear Web Service Docker en Render desde este repo, rama main, **Free**, una instancia, sin disco.
    render.yaml declara esta configuración; las variables sync:false se completan como secretos.
 7. Configurar APP_PASSWORD y TRUST_PROXY=1. APP_ORIGIN se obtiene de RENDER_EXTERNAL_URL automáticamente;

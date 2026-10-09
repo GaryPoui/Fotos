@@ -13,3 +13,6 @@ test-results
 playwright-report
 *.log
 
+
+dist-cloud
+.claude
