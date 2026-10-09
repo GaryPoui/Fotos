@@ -132,3 +132,5 @@ Evidencia local en test-results/ (ignorada por Git).
 - Build y tipos PASS. Galería existente móvil/escritorio: 2 PASS. Recorridos nuevos de carrusel y video móvil/escritorio: 4 PASS.
 - Verificados selección lateral, teclado, gesto horizontal/scroll vertical, vuelta circular, bibliotecas de uno/dos/cinco elementos, ampliación, pausa del video saliente y movimiento reducido. Sin desbordamiento a 360 px y controles >=44 px.
 - Capturas sintéticas revisadas en test-results/mobile-coverflow.png y desktop-coverflow.png. Publicación pendiente.
+- Publicado en https://ailu-y-tomy.onrender.com con commit 982214a, despliegue dep-db44u07lk1mc73erftf0 Live (2026-10-08 23:19 ART).
+- Navegador sobre bundle público: ingreso real, animación 550 ms, navegación y layout móvil/escritorio PASS. Biblioteca y archivos demo interceptados sólo dentro del navegador de prueba; sin cambiar datos personales. Capturas render-mobile-coverflow.png y render-desktop-coverflow.png.
