@@ -21,3 +21,6 @@ Código: server/app.ts, src/components/Music.tsx, src/components/Player.tsx.
 Compartido: server/, src/components/, tests/, scripts/, docs/.
 ## Complexity Tracking
 Sin violaciones. Se evita backend externo y autenticación de terceros.
+
+## Ampliación: música de fondo
+Selección aleatoria una vez por entrada autenticada en App. Player persistente comienza al 15%, aplica volumen antes de play y muestra activación cuando NotAllowedError impide autoplay. Usar GainNode sólo cuando el navegador no aplica audio.volume. Limpiar audio/contexto al salir. Sin cambios de API ni almacenamiento. Verificar audio sintético en móvil y escritorio, bloqueo, volumen y continuidad.

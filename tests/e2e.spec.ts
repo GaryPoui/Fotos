@@ -170,7 +170,7 @@ test("letters and settings persist and render text safely", async ({
     fullPage: true,
   });
 });
-test("audio plays only on request and stays mounted when navigating", async ({
+test("new audio upload stays paused until requested and persists when navigating", async ({
   page,
 }, info) => {
   await login(page);
@@ -652,3 +652,78 @@ test("coverflow: circular navigation, side selection, swipe, keyboard and reduce
     for(const id of ids) await page.request.delete('/api/media/'+id,{headers});
   }
 });
+for (const mode of ["normal", "blocked", "native-volume-ignored"] as const) {
+  test("background music: " + mode, async ({ page }, info) => {
+    const samples = 44100 * 40;
+    const wav = Buffer.alloc(44 + samples * 2);
+    wav.write("RIFF"); wav.writeUInt32LE(36 + samples * 2, 4);
+    wav.write("WAVE", 8); wav.write("fmt ", 12);
+    wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20);
+    wav.writeUInt16LE(1, 22); wav.writeUInt32LE(44100, 24);
+    wav.writeUInt32LE(88200, 28); wav.writeUInt16LE(2, 32);
+    wav.writeUInt16LE(16, 34); wav.write("data", 36);
+    wav.writeUInt32LE(samples * 2, 40);
+    for (let i = 0; i < samples; i++) wav.writeInt16LE(Math.round(Math.sin(i / 44100 * Math.PI * 440) * 1000), 44 + i * 2);
+    await page.addInitScript((mode) => {
+      Math.random = () => 0.75;
+      if (mode === "blocked") {
+        const play = HTMLMediaElement.prototype.play;
+        let first = true;
+        HTMLMediaElement.prototype.play = function () {
+          if (first) { first = false; return Promise.reject(new DOMException("Autoplay blocked", "NotAllowedError")); }
+          return play.call(this);
+        };
+      }
+      if (mode === "native-volume-ignored") {
+        Object.defineProperty(HTMLMediaElement.prototype, "volume", { configurable: true, get: () => 1, set: () => {} });
+        const createGain = AudioContext.prototype.createGain;
+        AudioContext.prototype.createGain = function () {
+          const gain = createGain.call(this);
+          (window as unknown as { testGain: GainNode }).testGain = gain;
+          return gain;
+        };
+      }
+    }, mode);
+    await page.route("**/api/library", async route => {
+      const original = await (await route.fetch()).json();
+      original.media = [0, 1].map(i => ({ id: "demo-song-" + i, kind: "audio", title: "Canción demo " + i, artist: "Demo", date: "2026-10-08", album: "", tags: [], favorite: false, mime: "audio/wav", size: wav.length, createdAt: "2026-10-08T12:00:00Z" }));
+      await route.fulfill({ json: original });
+    });
+    await page.route("**/api/files/demo-song-*", route => route.fulfill({ contentType: "audio/wav", body: wav }));
+    await login(page);
+    const player = page.getByRole("complementary", { name: "Reproductor de música" });
+    await expect(player).toContainText("Canción demo 1");
+    await expect(page.getByRole("slider", { name: "Volumen", exact: true })).toHaveValue("0.15");
+    if (mode === "blocked") {
+      await expect(page.getByRole("button", { name: "Activar música de fondo" })).toBeVisible();
+      expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.paused)).toBe(true);
+      await page.getByRole("button", { name: "Activar música de fondo" }).click();
+    }
+    await expect(page.getByRole("button", { name: "Pausar música" })).toBeVisible();
+    await expect.poll(() => page.locator("audio").evaluate((a: HTMLAudioElement) => a.currentTime)).toBeGreaterThan(0);
+    if (mode === "native-volume-ignored") {
+      expect(await page.evaluate(() => (window as unknown as { testGain: GainNode }).testGain.gain.value)).toBeCloseTo(0.15);
+    } else expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.volume)).toBe(0.15);
+    await page.getByRole("button", { name: "Música", exact: true }).click();
+    await page.getByRole("slider", { name: "Volumen", exact: true }).focus();
+    await page.keyboard.press("End");
+    await expect(page.getByRole("slider", { name: "Volumen", exact: true })).toHaveValue("1");
+    if (mode === "native-volume-ignored") {
+      expect(await page.evaluate(() => (window as unknown as { testGain: GainNode }).testGain.gain.value)).toBe(1);
+    } else expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.volume)).toBe(1);
+    await page.getByRole("button", { name: "Canción siguiente" }).click();
+    await expect(player).toContainText("Canción demo 0");
+    await page.getByRole("button", { name: "Pausar música" }).click();
+    await page.getByRole("button", { name: "Palabras", exact: true }).click();
+    await expect(page.getByRole("slider", { name: "Volumen", exact: true })).toHaveValue("1");
+    expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.paused)).toBe(true);
+    await assertFits(page);
+    if (info.project.name === "mobile") { await page.setViewportSize({ width: 360, height: 780 }); await assertFits(page); }
+    await player.screenshot({ path: "test-results/" + info.project.name + "-background-" + mode + ".png" });
+    await page.getByRole("button", { name: "Cerrar reproductor" }).click();
+    await page.getByRole("button", { name: "Música", exact: true }).click();
+    await expect(player).toHaveCount(0);
+    await page.getByRole("button", { name: "Cerrar sesión" }).click();
+    await expect(page.locator("audio")).toHaveCount(0);
+  });
+}

@@ -141,3 +141,9 @@ Evidencia local en test-results/ (ignorada por Git).
 - Se detectó en CI Linux que scrollIntoView sobre la caja proyectada de una tarjeta lateral desplazaba el escenario con overflow:hidden. Se cambió a overflow:clip y la prueba toca su superficie expuesta real; recorridos de carrusel móvil/escritorio PASS tras corregir.
 - Publicación final 8093013 en Render: Live. Prueba pública móvil/escritorio: inicio automático, avance a los 7 segundos, pausa y layout PASS; capturas render-autoplay-mobile.png y render-autoplay-desktop.png. Datos demo interceptados localmente, sin modificar recuerdos personales.
 - GitHub Actions 37874928340: integración, build y recorrido completo de navegador en Linux PASS; compilación Docker en curso al registrar esta evidencia.
+
+## 2026-10-08 — Música de fondo al entrar
+- Build y TypeScript correctos. Ocho recorridos Chromium móvil/escritorio: carga sin reproducción inesperada, selección aleatoria sobre biblioteca existente al 15%, controles persistentes, pausa/cierre/salida, bloqueo NotAllowedError con activación y volumen nativo ignorado con GainNode.
+- Sin desbordamiento a 360 px y controles de 44 px. La simulación de volumen ignorado no sustituye una prueba física en Safari iOS.
+- Publicación y comprobación en Render pendientes.
+

@@ -1,5 +1,5 @@
 import { cloudEnabled, storageReady } from "./cloud/config";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Heart,
   Images,
@@ -59,6 +59,19 @@ export default function App() {
   const [backupOpen, setBackupOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
   const [playRequest, setPlayRequest] = useState(0);
+  const musicStarted = useRef(false);
+  useEffect(() => {
+    if (!authenticated) {
+      musicStarted.current = false;
+      return;
+    }
+    if (!library || musicStarted.current) return;
+    musicStarted.current = true;
+    const songs = library.media.filter((item) => item.kind === "audio");
+    if (songs.length) {
+      setSelectedTrack(songs[Math.floor(Math.random() * songs.length)].id);
+    }
+  }, [authenticated, library]);
   const refresh = useCallback(async () => {
     const data = await api<Library>("/library");
     setLibrary(data);

@@ -102,5 +102,5 @@ HEIC/HEIF se convierte a JPEG en el dispositivo (hasta 20 MB/32 MP); conservar e
 HEVC debe exportarse como MP4 compatible. Audio/video depende del navegador.
 En local: 200 MiB por archivo y 1 GiB de originales por defecto, configurables; reservar
 espacio extra para miniaturas/temporales. En cloud: 50 MB por archivo y 900 MB reservados
-entre originales y miniaturas, dentro del plan Free. Música sólo por acción explícita. node:sqlite es experimental en Node 22.
+entre originales y miniaturas, dentro del plan Free. Música de fondo aleatoria al 15% al entrar; si el navegador bloquea el inicio, se activa con un botón. node:sqlite es experimental en Node 22.
 Chromium emulando celular no equivale a verificar Safari/iOS real.

@@ -26,7 +26,7 @@ Biblioteca vacía, contenido eliminado, sesión expirada, archivo inválido, pan
 ### Functional Requirements
 - **FR-001**: Subir audios privados con título y artista, con validación y persistencia.
 - **FR-002**: Ofrecer lista de canciones, reproducción/pausa, anterior/siguiente, progreso y volumen.
-- **FR-003**: Mantener reproductor al cambiar de sección y comenzar sólo por acción explícita.
+- **FR-003**: Mantener reproductor al cambiar de sección y intentar comenzar al entrar con una canción aleatoria al 15%, con activación explícita si el navegador lo bloquea.
 - **FR-004**: Permitir eliminar canciones con confirmación y mostrar errores de reproducción compatibles.
 
 ### Key Entities
@@ -45,3 +45,8 @@ Track: media kind audio, título, artista, archivo, fecha de creación.
 - Se usa disco persistente; no hay transcodificación ni sincronización offline.
 - La publicación online necesita un proveedor y contraseña definidos fuera de Git.
 - Los datos de ejemplo no se presentarán como recuerdos reales.
+
+## Música de fondo al entrar (2026-10-08)
+- FR-006: Tras autenticar y cargar la biblioteca, elegir uniformemente una canción disponible e intentar reproducirla al 15%. No descargar audio antes de la sesión.
+- FR-007: Música permite elegir pista, pausar y ajustar volumen; navegar o actualizar la biblioteca conserva esos cambios sin reiniciar ni reabrir un reproductor cerrado.
+- FR-008: Sin canciones no iniciar audio. Si se bloquea autoplay, mostrar un botón claro para activarlo. Atenuar también en móviles sin volumen nativo programable.

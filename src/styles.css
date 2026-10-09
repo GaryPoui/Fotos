@@ -2331,3 +2331,5 @@ input[type="range"] {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.background-music-activate { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 8px; border: 1px solid #d7cde3; border-radius: 12px; background: #f8edf4; color: #443e57; font: inherit; font-size: 12px; cursor: pointer; }

@@ -29,7 +29,7 @@ Los cambios visuales de bajo impacto no requieren pruebas que dupliquen su imple
 La experiencia MUST diseñarse mobile first desde 360 px, en español, con teclado y movimiento reducido.
 Celeste y rosado MUST ser los colores principales, con texto oscuro de contraste legible.
 Los controles táctiles MUST tener al menos 44 px y la navegación principal debe ser cómoda con una mano.
-La música MUST comenzar por una acción explícita. El contenido ficticio MUST identificarse como demo.
+La música MUST intentar comenzar al entrar con una canción aleatoria al 15%, respetando las políticas del navegador y ofreciendo activación explícita si se bloquea, además de pausa y volumen accesibles. El contenido ficticio MUST identificarse como demo.
 No se incorporarán servicios de pago ni dependencias de cuentas sin necesidad.
 
 ## Restricciones del producto
@@ -51,4 +51,4 @@ Las modificaciones deben justificar su motivo y actualizar su versión: major pa
 incompatibles, minor para principios nuevos y patch para aclaraciones.
 Cada cierre de spec debe revisar privacidad, persistencia y verificación.
 
-**Version**: 1.3.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-08
+**Version**: 1.4.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-08

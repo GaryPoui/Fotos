@@ -61,7 +61,7 @@ export function Music({
           <button className="button secondary" onClick={onUpload}>
             Agregar la primera canción
           </button>
-          <small>MP3, WAV, OGG o M4A · sin reproducción automática</small>
+          <small>MP3, WAV, OGG o M4A · música de fondo suave al entrar</small>
         </div>
       ) : (
         <div className="track-list">

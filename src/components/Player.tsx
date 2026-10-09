@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Play,
   Pause,
@@ -30,13 +30,72 @@ export function Player({
   const [playing, setPlaying] = useState(false),
     [time, setTime] = useState(0),
     [duration, setDuration] = useState(0),
-    [volume, setVolume] = useState(0.65),
+    [volume, setVolume] = useState(0.15),
+    [blocked, setBlocked] = useState(false),
     [error, setError] = useState("");
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
+  const graph = useRef<{ context: AudioContext; gain: GainNode } | null>(null);
+  const request = useRef(0);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const applyVolume = useCallback(() => {
+    const el = audio.current!;
+    if (!graph.current) {
+      el.volume = volumeRef.current;
+      // iOS may ignore media.volume; attenuate before connecting the source.
+      if (Math.abs(el.volume - volumeRef.current) > 0.001) {
+        const context = new AudioContext();
+        const gain = context.createGain();
+        gain.gain.value = volumeRef.current;
+        context.createMediaElementSource(el).connect(gain);
+        gain.connect(context.destination);
+        graph.current = { context, gain };
+      }
+    }
+    if (graph.current) {
+      el.volume = 1;
+      graph.current.gain.gain.value = volumeRef.current;
+    }
+  }, []);
+  const start = useCallback(async () => {
+    const current = ++request.current;
+    setError("");
+    setBlocked(false);
+    try {
+      applyVolume();
+      const context = graph.current?.context;
+      if (context && context.state !== "running") {
+        setBlocked(true);
+        await context.resume();
+      }
+      if (current !== request.current) return;
+      await audio.current!.play();
+      if (current === request.current) setBlocked(false);
+    } catch (e) {
+      if (current !== request.current) return;
+      setPlaying(false);
+      if ((e as Error).name === "NotAllowedError") setBlocked(true);
+      else if ((e as Error).name !== "AbortError")
+        setError("No pudimos reproducir. Probá otro formato o revisá tu conexión.");
+    }
+  }, [applyVolume]);
+  useEffect(() => {
+    clearTimeout(closeTimer.current);
+    return () => {
+      ++request.current;
+      audio.current?.pause();
+      closeTimer.current = setTimeout(() => {
+        void graph.current?.context.close();
+        graph.current = null;
+      }, 0);
+    };
+  }, []);
   const track = tracks.find((t) => t.id === selectedId);
   const trackRef = useRef(track);
   trackRef.current = track;
   useEffect(() => {
     if (!selectedId) {
+      ++request.current;
       audio.current?.pause();
       previousId.current = null;
       return;
@@ -54,11 +113,9 @@ export function Player({
       setDuration(0);
       el.load();
     }
-    void el.play().catch(() => {
-      setPlaying(false);
-      setError("Tocá play para escuchar. Si no abre, probá MP3.");
-    });
-  }, [selectedId, playRequest, onSelect]);
+    void start();
+    return () => { ++request.current; };
+  }, [selectedId, playRequest, onSelect, start]);
   useEffect(() => {
     if (selectedId && !tracks.some((t) => t.id === selectedId)) {
       audio.current?.pause();
@@ -66,17 +123,17 @@ export function Player({
     }
   }, [tracks, selectedId, onSelect]);
   useEffect(() => {
-    if (audio.current) audio.current.volume = volume;
-  }, [volume]);
+    if (audio.current) {
+      try { applyVolume(); } catch { /* Report unsupported audio on play. */ }
+    }
+  }, [volume, applyVolume]);
   const next = (delta: number) => {
     if (!tracks.length || !selectedId) return;
     const index = tracks.findIndex((t) => t.id === selectedId);
     onSelect(tracks[(index + delta + tracks.length) % tracks.length].id);
     if (tracks.length === 1) {
       audio.current!.currentTime = 0;
-      void audio
-        .current!.play()
-        .catch(() => setError("No pudimos reproducir este audio."));
+      void start();
     }
   };
   return (
@@ -121,15 +178,8 @@ export function Player({
                 className="play-main"
                 aria-label={playing ? "Pausar música" : "Reproducir música"}
                 onClick={() => {
-                  if (playing) audio.current?.pause();
-                  else {
-                    setError("");
-                    void audio.current
-                      ?.play()
-                      .catch(() =>
-                        setError("No pudimos reproducir. Probá otro formato."),
-                      );
-                  }
+                  if (playing) { ++request.current; audio.current?.pause(); }
+                  else void start();
                 }}
               >
                 {playing ? (
@@ -154,6 +204,11 @@ export function Player({
               <X size={16} />
             </button>
           </div>
+          {blocked && (
+            <button className="background-music-activate" onClick={() => void start()}>
+              <Play size={16} /> Activar música de fondo
+            </button>
+          )}
           <div className="player-seek">
             <span>{clock(time)}</span>
             <input
