@@ -30,6 +30,7 @@ Biblioteca vacía, contenido eliminado, sesión expirada, archivo inválido, pan
 - **FR-004**: Respetar movimiento reducido, pausar al ocultar la pestaña y evitar reproducir videos automáticamente.
 - **FR-005**: En la vista carrusel, mostrar la foto central grande y hasta dos recuerdos inclinados a cada lado, con profundidad y transición suave circular inspirada en la referencia del usuario del 2026-10-08. Mantener celeste/rosado, acceso al original completo y videos pausados al cambiar de recuerdo.
 - **FR-006**: Permitir seleccionar recuerdos laterales, navegar con flechas o gesto horizontal sin interceptar el scroll vertical; desactivar transiciones y presentación bajo movimiento reducido. Resolver sin duplicados bibliotecas de uno o dos recuerdos.
+- **FR-007**: Iniciar automáticamente la presentación al abrir el carrusel con dos o más recuerdos y avanzar cada 7 segundos. Mantener pausa manual y por interacción, video o pestaña oculta; no iniciar automáticamente el visor ampliado ni bajo movimiento reducido.
 
 ### Key Entities
 ViewPreference: vista elegida local; SlideshowState: índice y pausa, efímero.

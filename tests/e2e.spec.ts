@@ -586,6 +586,12 @@ test("coverflow: circular navigation, side selection, swipe, keyboard and reduce
     const stage = page.getByRole('region', {name:'Carrusel de recuerdos'});
     await expect(stage.locator('.coverflow-card')).toHaveCount(5);
     await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
+    await expect(page.getByRole('button',{name:'Pausar',exact:true})).toBeVisible();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 4',{timeout:9000});
+    await page.getByRole('button',{name:'Pausar',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Presentación',exact:true})).toBeVisible();
+    await stage.getByRole('button',{name:'Recuerdo anterior'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
     await stage.getByRole('button', {name:'Recuerdo anterior'}).click();
     await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 1');
     await stage.focus();

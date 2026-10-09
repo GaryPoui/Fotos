@@ -38,7 +38,9 @@ export function Viewer({
         items.findIndex((i) => i.id === initialId),
       ),
     ),
-    [auto, setAuto] = useState(false),
+    [auto, setAuto] = useState(() =>
+      inline && items.length > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches,
+    ),
     [hidden, setHidden] = useState(document.hidden),
     [failed, setFailed] = useState(false);
   const [reduced, setReduced] = useState(
@@ -69,7 +71,7 @@ export function Viewer({
     const t = setInterval(() => {
       setIndex((n) => (n + 1) % items.length);
       setFailed(false);
-    }, 5000);
+    }, 7000);
     return () => clearInterval(t);
   }, [auto, hidden, reduced, items.length]);
   useEffect(() => {

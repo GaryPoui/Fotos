@@ -29,3 +29,5 @@ Renderizar sólo vecinos próximos; usar miniaturas privadas y videos con metada
 Pausar el video saliente. Mantener visor modal completo y acciones existentes. Sin nueva dependencia.
 Gestos distinguen horizontal/vertical; flechas de teclado limitadas al escenario enfocado.
 Verificar con Playwright y capturas sintéticas, compilar, commit/push y desplegar Render Free.
+La presentación inline comienza activa (excepto movimiento reducido o un solo recuerdo), con intervalo
+de 7000 ms; se conserva la pausa existente por interacción, reproducción de video y pestaña oculta.
