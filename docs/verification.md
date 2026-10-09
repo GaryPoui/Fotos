@@ -147,3 +147,5 @@ Evidencia local en test-results/ (ignorada por Git).
 - Sin desbordamiento a 360 px y controles de 44 px. La simulación de volumen ignorado no sustituye una prueba física en Safari iOS.
 - Publicación y comprobación en Render pendientes.
 
+- Publicado commit 7acbb59: Render dep-db45huu0tbcc73d76ang Live. Verificación HTTPS con ingreso real y audios demo interceptados sólo en el navegador: volumen 15%, reproducción real, navegación, siguiente, volumen 100%, pausa y salida PASS móvil/escritorio. Capturas render-background-mobile.png y render-background-desktop.png; no se modificaron recuerdos ni canciones personales.
+

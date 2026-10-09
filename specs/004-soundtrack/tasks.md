@@ -19,4 +19,4 @@ Entregas incrementales con validación, commit/push y converge.
 
 ## Música de fondo al entrar
 - [X] T006 [US1] Selección aleatoria al entrar, volumen inicial 15%, activación si autoplay se bloquea, atenuación móvil y continuidad de controles.
-- [ ] T007 [US1] Verificar en navegador móvil/escritorio, compilar, publicar y registrar evidencia.
+- [X] T007 [US1] Verificar en navegador móvil/escritorio, compilar, publicar y registrar evidencia.
