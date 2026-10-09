@@ -104,8 +104,7 @@ Revisión de los seis spec.md, plan.md y tasks.md: 24 requisitos funcionales, 24
 18 escenarios de aceptación y cinco principios de constitución. Sin brechas de implementación pendientes.
 La primera revisión detectó el bloqueo con PID reutilizado en Docker; se agregó T007 al spec 006,
 se implementó el bloqueo compartido con heartbeat y se verificó el reemplazo real del contenedor.
-Todas las tareas de specs 001–006 quedan completas. La alternativa vigente de publicación
-es spec 008; spec 007 conserva sus pendientes porque corresponde a otra arquitectura.
+Todas las tareas de specs 001–006 quedan completas. La alternativa vigente de publicación es spec 007 (Render + Supabase); spec 008 conserva la alternativa Firebase.
 
 ## Pendiente externo
 
@@ -120,4 +119,10 @@ Evidencia local en test-results/ (ignorada por Git).
 - Build y tipos: PASS. Integración: 32 PASS, 5 reglas Firebase omitidas sin emulador. Navegador móvil/escritorio: 20 PASS tras integrar mejoras de recuerdos.
 - Supabase real: conexión PostgreSQL cifrada con CA verificada y rol dedicado, puente de Storage con token limitado, subida/miniatura/Range, carta y sesión conservadas al recrear servidor: PASS. Datos sintéticos eliminados al terminar.
 - GitHub Actions de integración previa: ejecución 37869802452 completada correctamente.
-- Publicación Render y prueba pública pendientes.
+- Publicación y prueba pública completadas; detalle a continuación.
+
+- Publicación verificada: https://ailu-y-tomy.onrender.com (Render Docker Free, servicio srv-db449pflk1mc73epajrg; Supabase Nuestro rincon, plan Free).
+- HTTPS público: salud, ingreso con contraseña configurada, cookie Secure/HttpOnly, API anónima 401, subida de foto, miniatura y Range 206: PASS.
+- Reinicio real de Render registrado en Events el 2026-10-08 22:37 ART: misma sesión, foto y carta recuperadas: PASS. Contenido sintético eliminado al terminar.
+- Chromium móvil 390×844 sobre producción: ingreso, carga de biblioteca y sin desbordamiento horizontal: PASS. Capturas en test-results/render-mobile-login.png y render-mobile-live.png (ignoradas por Git).
+- No se agregó tarjeta, disco ni plan de pago. Publicación del código 625defe; cambios posteriores de documentación no requieren recompilación.

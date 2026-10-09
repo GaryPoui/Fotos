@@ -20,14 +20,14 @@ Diseño **mobile first**, celeste y rosado, navegación inferior y controles tá
 
 ## Inicio local
 
-Node.js >=22.13 y npm; se recomienda el último parche de Node 22.
+Node.js >=22.13 y npm; para producción se utiliza Node 24.
 
 ```powershell
 npm ci
 Copy-Item .env.example .env
 ```
 
-Editar `.env`: definir `APP_PASSWORD` propia con al menos 12 caracteres. No subir este archivo.
+Editar `.env`: definir `APP_PASSWORD` propia con al menos 10 caracteres. No subir este archivo.
 
 ```powershell
 npm run dev
@@ -50,11 +50,12 @@ Ver [evidencia y límites](docs/verification.md).
 
 ## Publicar online
 
-La opción cloud gratuita usa **Firebase Hosting/Auth/Firestore + Supabase Free** para
-archivos privados: ver [configuración gratuita](docs/free-hosting.md) y [spec 008](specs/008-firebase-hybrid/spec.md).
+La opción gratuita activa usa **Render Free + Supabase Free** para servidor, base de datos y
+archivos privados: ver [configuración gratuita](docs/free-hosting.md) y [spec 007](specs/007-free-hosting/spec.md).
+La alternativa Firebase se conserva en [su guía](docs/firebase-hosting.md).
 La modalidad local/Node sigue disponible en [hosting y respaldos](docs/hosting.md), con HTTPS y disco
 persistente. No se publican automáticamente recuerdos locales ni se habilita facturación.
-Web publicada: **https://fotosconailu.web.app**.
+Web publicada: **https://ailu-y-tomy.onrender.com**.
 El estado verificado de publicación está en [docs/verification.md](docs/verification.md).
 
 ```powershell
@@ -63,7 +64,8 @@ npm start
 ```
 
 En producción: `NODE_ENV=production`, `APP_ORIGIN=https://tu-dominio`, `APP_PASSWORD`, `DATA_DIR`.
-Render requiere disco persistente de pago; también funciona en VPS con Docker.
+Render Free utiliza PostgreSQL y Storage de Supabase; el disco sólo recibe archivos temporales.
+La modalidad SQLite requiere disco persistente; también funciona en VPS con Docker.
 
 ## Spec Kit
 
@@ -80,6 +82,7 @@ del agente, no comandos ficticios de terminal.
 | [004](specs/004-soundtrack/spec.md) | Música y reproductor |
 | [005](specs/005-love-notes/spec.md) | Frases y cartas |
 | [006](specs/006-online-readiness/spec.md) | Hosting, respaldo y verificación |
+| [007](specs/007-free-hosting/spec.md) | Render Free y persistencia privada en Supabase Free |
 | [008](specs/008-firebase-hybrid/spec.md) | Firebase Spark y archivos privados en Supabase Free |
 | [009](specs/009-memories-care/spec.md) | Respaldos, subidas recuperables, HEIC, portada y fechas |
 

@@ -15,9 +15,9 @@
 **Independent test**: confirmar plan Free sin disco y rechazo al superar cupos.
 - [X] T007 [US2] Configurar render.yaml y .env.example con archivo <= 50.000.000 bytes y suma storedBytes <= 900.000.000 bytes; fallar con configuración incompleta.
 - [X] T008 [US2] Documentar configuración gratuita, pausas, respaldo remoto y publicación en docs/free-hosting.md y docs/hosting.md.
-- [ ] T009 [US2] Publicar con cuentas del usuario y verificar URL HTTPS, persistencia, privacidad y plan gratuito; registrar evidencia en docs/verification.md.
+- [X] T009 [US2] Publicar con cuentas del usuario y verificar URL HTTPS, persistencia, privacidad y plan gratuito; registrar evidencia en docs/verification.md.
 ## Phase 5: Polish
-- [ ] T010 Ejecutar build, integración y navegador; registrar resultado en docs/verification.md; commit y push por avance.
+- [X] T010 Ejecutar build, integración y navegador; registrar resultado en docs/verification.md; commit y push por avance.
 - [X] T011 [US1] Implementar y verificar puente de Storage con token limitado en supabase/functions/rincon-storage/, tests/storage-bridge.test.ts y server/cloud-storage.ts; mantener service-role dentro de Supabase.
 
 ## Dependencies & Execution Order
@@ -26,4 +26,3 @@ T001 → T002 → T003/T004 → T005 → T006 → T007/T008 → T009/T010. T009 
 Investigación de proveedores independiente; implementación secuencial para evitar conflictos de archivos.
 ## Implementation Strategy
 Primero modalidad remota compatible, luego verificación local y finalmente publicación gratuita con cuentas reales. No afirmar publicación antes de comprobar dirección pública.
-
