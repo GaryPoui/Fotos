@@ -317,6 +317,7 @@ export default function App() {
             </div>
             {page === "memories" && (
               <Gallery
+                preferences={library.albums}
                 items={library.media.filter((m) => m.kind !== "audio")}
                 requestedMemory={requestedMemory}
                 calendarToday={calendarToday}
@@ -394,6 +395,7 @@ export default function App() {
       )}
       {uploadType && library && (
         <UploadDialog
+          preferences={library.albums}
           type={uploadType}
           maxFile={library.storage.maxFile}
           onClose={() => setUploadType(null)}

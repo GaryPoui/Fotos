@@ -25,7 +25,8 @@ import { z, ZodError } from "zod";
 import { openDatabase, type Database } from "./database.js";
 import type { ObjectStorage } from "./cloud-storage.js";
 import { inspectFile, thumbnail } from "./files.js";
-import type { Media, Note, Settings } from "../shared/types.js";
+import type { Media, Note, Settings, AlbumCustomization } from "../shared/types.js";
+import { albumKey, albumTitle, albumNameKey } from "../shared/albums.js";
 
 const hash = (value: string | Buffer) =>
   createHash("sha256").update(value).digest("hex");
@@ -76,6 +77,11 @@ class ApiError extends Error {
     super(message);
   }
 }
+const albumInput = z.object({
+  album: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(80),
+  coverId: z.string().uuid().nullable(),
+}).strict();
 type MediaRow = Omit<Media, "tags" | "favorite"> & {
   filename: string;
   tags: string;
@@ -336,14 +342,40 @@ export async function createApp(options: AppOptions) {
         .prepare("SELECT * FROM notes ORDER BY date DESC, createdAt DESC")
         .all()) as unknown as NoteRow[]
     ).map(publicNote);
+  const getAlbums = async (): Promise<AlbumCustomization[]> => {
+    const rows = await db.prepare("SELECT value FROM meta WHERE key LIKE 'album:%'").all() as { value: string }[];
+    return rows.flatMap((row) => {
+      try {
+        const parsed = albumInput.safeParse(JSON.parse(row.value));
+        return parsed.success ? [parsed.data] : [];
+      } catch { return []; }
+    });
+  };
   app.get("/api/library", async (_req, res) =>
     res.json({
       media: await mediaRows(),
       notes: await noteRows(),
       settings: await getSettings(),
+      albums: await getAlbums(),
       storage: { used: await used(), limit: maxStorage, maxFile },
     }),
   );
+  app.patch("/api/albums", async (req, res) => {
+    const input = albumInput.parse(req.body);
+    const items = (await mediaRows()).filter((item) => item.kind !== "audio");
+    if (!items.some((item) => item.album === input.album))
+      throw new ApiError(404, "No encontramos este álbum. Recargá la página.");
+    if (input.coverId && !items.some((item) => item.id === input.coverId && item.album === input.album && item.kind === "photo"))
+      throw new ApiError(400, "Elegí una foto que pertenezca a este álbum.");
+    const preferences = await getAlbums();
+    const conflict = items.some((item) => item.album && item.album !== input.album &&
+      [item.album, albumTitle(item.album, preferences)].some((name) => albumNameKey(name) === albumNameKey(input.title))) ||
+      preferences.some((entry) => entry.album !== input.album && [entry.album, entry.title].some((name) => albumNameKey(name) === albumNameKey(input.title)));
+    if (conflict) throw new ApiError(409, "Ya hay otro álbum con ese nombre. Elegí uno diferente.");
+    await db.prepare("INSERT INTO meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+      .run("album:" + encodeURIComponent(input.album), JSON.stringify(input));
+    res.json(input);
+  });
   app.get("/api/settings", async (_req, res) => res.json(await getSettings()));
   app.patch("/api/settings", async (req, res) => {
     const settings = settingsInput.parse(req.body);
@@ -401,7 +433,7 @@ export async function createApp(options: AppOptions) {
           req.body.title ||
           req.file.originalname.replace(/\.[^.]+$/, "").slice(0, 150),
         date: req.body.date || today(),
-        album: req.body.album || "",
+        album: albumKey(z.string().max(80).parse(req.body.album || ""), await getAlbums()),
         tags: req.body.tags ? JSON.parse(req.body.tags) : [],
         artist: req.body.artist || "",
       });
@@ -518,6 +550,7 @@ export async function createApp(options: AppOptions) {
       favorite,
       artist,
       ...req.body,
+      ...(req.body.album !== undefined ? { album: albumKey(z.string().max(80).parse(req.body.album), await getAlbums()) } : {}),
     });
     await db
       .prepare(

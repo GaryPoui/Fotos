@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import {
-  CalendarHeart, ArrowRight, Images, Play, Heart, ChevronLeft, ChevronRight,
+  CalendarHeart, ArrowRight, Images, Play, Heart, ChevronLeft, ChevronRight, Pencil,
 } from "lucide-react";
-import type { Media } from "../../shared/types";
+import type { Media, AlbumCustomization } from "../../shared/types";
+import { albumTitle, albumCover } from "../../shared/albums";
+import { cloudEnabled } from "../cloud/config";
 import { mediaUrl, formatDate } from "../lib";
 import { albumGroups, onThisDay } from "../moments";
 export function Revisit({
@@ -12,6 +14,8 @@ export function Revisit({
   onAlbum,
   onOpen,
   onDay,
+  preferences = [],
+  onEditAlbum,
 }: {
   items: Media[];
   today: string;
@@ -19,6 +23,8 @@ export function Revisit({
   onAlbum: (name: string) => void;
   onOpen: (id: string) => void;
   onDay: () => void;
+  preferences?: AlbumCustomization[];
+  onEditAlbum: (name: string) => void;
 }) {
   const memories = onThisDay(items, today),
     albums = albumGroups(items);
@@ -133,11 +139,13 @@ export function Revisit({
             onScroll={updateAlbumEdges}
           >
             {albums.map((group) => {
-              const cover = group.media.find((i) => i.kind === "photo");
+              const cover = albumCover(group.name, group.media, preferences);
+              const title = albumTitle(group.name, preferences);
               return (
+                <article key={group.name} className="album-card">
                 <button
-                  key={group.name}
-                  aria-label={"Ver álbum " + group.name}
+                  className="album-open"
+                  aria-label={"Ver álbum " + title}
                   aria-pressed={album === group.name}
                   onClick={() =>
                     onAlbum(album === group.name ? "" : group.name)
@@ -151,13 +159,15 @@ export function Revisit({
                     </span>
                   )}
                   <span>
-                    <strong>{group.name}</strong>
+                    <strong>{title}</strong>
                     <small>
                       {group.media.length}{" "}
                       {group.media.length === 1 ? "momento" : "momentos"}
                     </small>
                   </span>
                 </button>
+                {!cloudEnabled && <button className="album-edit" aria-label={"Editar álbum " + title} onClick={() => onEditAlbum(group.name)}><Pencil size={15} /><span>Editar</span></button>}
+                </article>
               );
             })}
           </div>

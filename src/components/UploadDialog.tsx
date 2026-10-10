@@ -11,17 +11,21 @@ import { Dialog } from "./Dialog";
 import { bytes, today, upload } from "../lib";
 import { prepareImage } from "../prepare-image";
 import { cloudEnabled } from "../cloud/config";
+import type { AlbumCustomization } from "../../shared/types";
+import { albumTitle, albumKey } from "../../shared/albums";
 import { loadDraft, saveDraft, type UploadItem as Item } from "../upload-queue";
 export function UploadDialog({
   type,
   maxFile,
   albums,
+  preferences = [],
   onClose,
   onChanged,
 }: {
   type: "memories" | "music";
   maxFile: number;
   albums: string[];
+  preferences?: AlbumCustomization[];
   onClose: () => void;
   onChanged: (message: string) => Promise<void>;
 }) {
@@ -43,7 +47,7 @@ export function UploadDialog({
     items: list,
     title,
     date,
-    album,
+    album: albumKey(album, preferences),
     tags,
     artist,
   });
@@ -59,7 +63,7 @@ export function UploadDialog({
           setItems(value.items);
           setTitle(value.title);
           setDate(value.date);
-          setAlbum(value.album);
+          setAlbum(albumTitle(value.album, preferences));
           setTags(value.tags);
           setArtist(value.artist);
           setRestored(true);
@@ -179,7 +183,7 @@ export function UploadDialog({
                   ? title.trim()
                   : items[i].file.name.replace(/\.[^.]+$/, "").slice(0, 150),
               date,
-              album,
+              album: albumKey(album, preferences),
               tags: JSON.stringify(tagList),
               artist,
             },
@@ -430,15 +434,15 @@ export function UploadDialog({
                       className="album-suggestion"
                       type="button"
                       disabled={busy}
-                      onClick={() => setAlbum(name)}
+                      onClick={() => setAlbum(albumTitle(name, preferences))}
                     >
-                      {name}
+                      {albumTitle(name, preferences)}
                     </button>
                   ))}
                 </span>
                 <datalist id="albums">
                   {albums.map((a) => (
-                    <option key={a} value={a} />
+                    <option key={a} value={albumTitle(a, preferences)} />
                   ))}
                 </datalist>
               </label>

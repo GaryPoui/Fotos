@@ -9,12 +9,14 @@ import {
   Trash2,
   Expand,
 } from "lucide-react";
-import type { Media } from "../../shared/types";
+import type { Media, AlbumCustomization } from "../../shared/types";
+import { albumTitle } from "../../shared/albums";
 import { formatDate, mediaUrl } from "../lib";
 import { Dialog } from "./Dialog";
 import { Coverflow } from "./Coverflow";
 export function Viewer({
   items,
+  preferences = [],
   initialId,
   onClose,
   onEdit,
@@ -24,6 +26,7 @@ export function Viewer({
   onOpen,
 }: {
   items: Media[];
+  preferences?: AlbumCustomization[];
   initialId: string;
   onClose: () => void;
   onEdit: (i: Media) => void;
@@ -209,7 +212,7 @@ export function Viewer({
           <h3>{item.title}</h3>
           <p>
             {formatDate(item.date, true)}
-            {item.album && " · " + item.album}
+            {item.album && " · " + albumTitle(item.album, preferences)}
           </p>
           {item.tags.length > 0 && (
             <div className="tags">

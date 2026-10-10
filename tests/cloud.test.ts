@@ -125,6 +125,21 @@ function upload(cookie: string) {
 }
 
 describe("Free hosting persistence", () => {
+  it("stores album titles and covers in PostgreSQL without rewriting remote memories or objects", async () => {
+    const cookie = await login();
+    const photo = await upload(cookie).field("album", "Viajes").expect(201);
+    const rowsBefore = (await pg.query("SELECT * FROM rincon.media ORDER BY id")).rows;
+    const originalsBefore = new Map(files);
+    const body = { album: "Viajes", title: "Nuestro viaje", coverId: photo.body.id };
+    await request(runtime.app).patch("/api/albums").set(headers).set("Cookie", cookie).send(body).expect(200);
+    expect((await pg.query("SELECT * FROM rincon.media ORDER BY id")).rows).toEqual(rowsBefore);
+    expect(files).toEqual(originalsBefore);
+    await runtime.close();
+    runtime = await start();
+    const library = await request(runtime.app).get("/api/library").set("Cookie", cookie).expect(200);
+    expect(library.body.albums).toContainEqual(body);
+    expect(library.body.media[0].album).toBe("Viajes");
+  });
   it("keeps photos, thumbnails, letters, settings and sessions after replacing staging; proxies ranges privately", async () => {
     const cookie = await login();
     const photo = await upload(cookie).expect(201);

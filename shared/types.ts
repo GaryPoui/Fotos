@@ -30,8 +30,14 @@ export interface Settings {
   title: string;
 }
 export interface Library {
+  albums?: AlbumCustomization[];
   media: Media[];
   notes: Note[];
   settings: Settings;
   storage: { used: number; limit: number; maxFile: number };
+}
+export interface AlbumCustomization {
+  album: string;
+  title: string;
+  coverId: string | null;
 }

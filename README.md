@@ -86,6 +86,7 @@ del agente, no comandos ficticios de terminal.
 | [008](specs/008-firebase-hybrid/spec.md) | Firebase Spark y archivos privados en Supabase Free |
 | [009](specs/009-memories-care/spec.md) | Respaldos, subidas recuperables, HEIC, portada y fechas |
 | [010](specs/010-photo-metadata/spec.md) | Fechas automáticas retiradas a pedido del usuario; selector manual restaurado |
+| [011](specs/011-album-customization/spec.md) | Editar nombres de álbumes y elegir su foto de portada |
 
 Los specs 001–006 incluyen plan, investigación, modelo, contratos, guía y tareas.
 Spec 008 documenta la alternativa cloud implementada con spec, plan y tareas.

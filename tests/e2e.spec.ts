@@ -41,6 +41,70 @@ async function uploadPhoto(page: Page, title: string) {
   await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
+test("album editing persists title and cover without splitting new uploads, handles cancellation and retry", async ({ page }, info) => {
+  await login(page);
+  if (info.project.name === "mobile") await page.setViewportSize({ width: 360, height: 900 });
+  const album = "Álbum demo " + info.project.name;
+  const renamed = "Nuestra historia " + info.project.name;
+  const records = [];
+  for (const name of ["Primera portada", "Segunda portada"]) {
+    const response = await page.request.post("/api/media", { headers, multipart: {
+      file: { name: "cielo.png", mimeType: "image/png", buffer: png }, title: name, album, date: "2021-02-14",
+    }});
+    expect(response.ok()).toBe(true); records.push(await response.json());
+  }
+  const before = (await (await page.request.get("/api/library")).json()).media.filter((item: { album: string }) => item.album === album);
+  try {
+    await page.reload();
+    await page.getByRole("button", { name: "Editar álbum " + album, exact: true }).click();
+    await page.getByLabel("Nombre del álbum").fill("Sin guardar");
+    await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Ver álbum " + album, exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Editar álbum " + album, exact: true }).click();
+    await page.getByLabel("Nombre del álbum").fill(renamed);
+    await page.getByRole("radio", { name: "Usar como portada: Segunda portada", exact: true }).check();
+    await assertFits(page);
+    await page.screenshot({ path: "test-results/album-editor-" + info.project.name + ".png" });
+    let fail = true;
+    await page.route("**/api/albums", async (route) => {
+      if (fail) { fail = false; await route.fulfill({ status: 503, json: { error: "Ejemplo: conexión interrumpida" } }); }
+      else await route.continue();
+    });
+    await page.getByRole("button", { name: "Guardar álbum", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("conexión interrumpida");
+    await expect(page.getByLabel("Nombre del álbum")).toHaveValue(renamed);
+    await page.getByRole("button", { name: "Guardar álbum", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.reload();
+    const card = page.getByRole("button", { name: "Ver álbum " + renamed, exact: true });
+    await expect(card.locator("img")).toHaveAttribute("src", "/api/files/" + records[1].id + "?thumb=1");
+    const unchanged = (await (await page.request.get("/api/library")).json()).media.filter((item: { album: string }) => item.album === album);
+    expect(unchanged).toEqual(before);
+    await page.getByRole("button", { name: "Mostrar filtros" }).click();
+    await page.getByRole("combobox", { name: "Álbum", exact: true }).selectOption({ label: renamed });
+    await expect(page.locator(".memory-grid .memory-card")).toHaveCount(2);
+    await page.getByRole("button", { name: "Abrir Segunda portada", exact: true }).click();
+    await expect(page.locator(".viewer-info")).toContainText(renamed);
+    await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+    await page.getByRole("button", { name: "Subir recuerdos", exact: true }).click();
+    await page.getByLabel("Fotos y videos", { exact: true }).setInputFiles({ name: "tercera.png", mimeType: "image/png", buffer: png });
+    await page.getByLabel("Álbum", { exact: true }).fill(renamed);
+    await page.getByLabel("Título", { exact: true }).fill("Tercer recuerdo");
+    await page.getByRole("button", { name: "Guardar en nuestro rincón", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const after = (await (await page.request.get("/api/library")).json()).media;
+    const added = after.find((item: { title: string }) => item.title === "Tercer recuerdo");
+    expect(added.album).toBe(album); records.push(added);
+    await page.getByRole("button", { name: "Editar álbum " + renamed, exact: true }).click();
+    await page.getByRole("radio", { name: "Portada automática", exact: true }).check();
+    await page.getByRole("button", { name: "Guardar álbum", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const prefs = (await (await page.request.get("/api/library")).json()).albums;
+    expect(prefs.find((entry: { album: string }) => entry.album === album).coverId).toBeNull();
+  } finally {
+    for (const item of records) await page.request.delete("/api/media/" + item.id, { headers });
+  }
+});
 test("gallery: upload, edit, favorite, filter, carousel, reduced motion, delete and logout", async ({
   page,
 }, info) => {

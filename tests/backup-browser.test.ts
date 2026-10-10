@@ -16,6 +16,7 @@ const media = {
   createdAt: "",
 } as Media;
 const library: Library = {
+  albums: [{ album: "Viaje", title: "Nuestros viajes", coverId: media.id }],
   media: [media],
   notes: [
     {
@@ -54,6 +55,7 @@ it("exports readable private originals, thumbnails, letters and verifiable hashe
     "/api/files/" + media.id + "?thumb=1",
   ]);
   expect(manifest.settings).toEqual(library.settings);
+  expect(manifest.albums).toEqual(library.albums);
   expect(manifest.files).toHaveLength(3);
   for (const item of manifest.files) {
     const hash = Buffer.from(

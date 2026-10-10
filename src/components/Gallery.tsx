@@ -12,7 +12,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import type { Media } from "../../shared/types";
+import type { Media, AlbumCustomization } from "../../shared/types";
+import { albumTitle, albumKey } from "../../shared/albums";
+import { AlbumDialog } from "./AlbumDialog";
 import { api, formatDate, mediaUrl } from "../lib";
 import { Confirm, Dialog } from "./Dialog";
 import { Revisit } from "./Revisit";
@@ -21,6 +23,7 @@ import { Viewer } from "./Viewer";
 type View = "grid" | "timeline" | "carousel";
 export function Gallery({
   items,
+  preferences = [],
   requestedMemory,
   calendarToday,
   onUpload,
@@ -28,6 +31,7 @@ export function Gallery({
   onError,
 }: {
   items: Media[];
+  preferences?: AlbumCustomization[];
   requestedMemory?: { id: string; nonce: number };
   calendarToday: string;
   onUpload: () => void;
@@ -35,6 +39,7 @@ export function Gallery({
   onError: (e: string) => void;
 }) {
   const [dayOnly, setDayOnly] = useState(false);
+  const [editingAlbum, setEditingAlbum] = useState<string | null>(null);
   const [query, setQuery] = useState(""),
     [album, setAlbum] = useState(""),
     [kind, setKind] = useState(""),
@@ -71,7 +76,7 @@ export function Gallery({
             (!album || item.album === album) &&
             (!kind || item.kind === kind) &&
             (!favorites || item.favorite) &&
-            [item.title, item.album, ...item.tags]
+            [item.title, albumTitle(item.album, preferences), ...item.tags]
               .join(" ")
               .toLocaleLowerCase("es")
               .includes(query.toLocaleLowerCase("es")),
@@ -81,7 +86,7 @@ export function Gallery({
             ? a.date.localeCompare(b.date)
             : b.date.localeCompare(a.date),
         ),
-    [items, album, kind, favorites, query, sort, dayOnly, calendarToday],
+    [items, preferences, album, kind, favorites, query, sort, dayOnly, calendarToday],
   );
   const albums = [...new Set(items.map((i) => i.album).filter(Boolean))].sort();
   useEffect(() => {
@@ -136,7 +141,7 @@ export function Gallery({
         <h3>{item.title}</h3>
         <p>
           {formatDate(item.date)}
-          {item.album && <span> · {item.album}</span>}
+          {item.album && <span> · {albumTitle(item.album, preferences)}</span>}
         </p>
       </div>
     </article>
@@ -147,6 +152,8 @@ export function Gallery({
         items={items}
         today={calendarToday}
         album={album}
+        preferences={preferences}
+        onEditAlbum={setEditingAlbum}
         onOpen={(id) => {
           setQuery("");
           setAlbum("");
@@ -172,7 +179,7 @@ export function Gallery({
       />
       {(dayOnly || album) && (
         <div className="active-memory-filter" role="status">
-          <span>{dayOnly ? "Un día como hoy" : "Álbum: " + album}</span>
+          <span>{dayOnly ? "Un día como hoy" : "Álbum: " + albumTitle(album, preferences)}</span>
           <button
             className="icon-button"
             aria-label="Quitar filtro de fecha o álbum"
@@ -266,7 +273,7 @@ export function Gallery({
             <select value={album} onChange={(e) => setAlbum(e.target.value)}>
               <option value="">Todos los álbumes</option>
               {albums.map((a) => (
-                <option key={a}>{a}</option>
+                <option key={a} value={a}>{albumTitle(a, preferences)}</option>
               ))}
             </select>
           </label>
@@ -332,6 +339,7 @@ export function Gallery({
       ) : view === "carousel" ? (
         <Viewer
           key={filtered.map((i) => i.id).join(",")}
+          preferences={preferences}
           items={filtered}
           initialId={filtered[0].id}
           inline
@@ -365,6 +373,7 @@ export function Gallery({
       )}
       {selected && filtered.some((i) => i.id === selected) && (
         <Viewer
+          preferences={preferences}
           items={filtered}
           initialId={selected}
           onClose={() => setSelected(null)}
@@ -382,6 +391,7 @@ export function Gallery({
       {editing && (
         <EditMedia
           item={editing}
+          preferences={preferences}
           onClose={() => setEditing(null)}
           onChanged={onChanged}
         />
@@ -406,21 +416,24 @@ export function Gallery({
           }}
         />
       )}
+      {editingAlbum && <AlbumDialog album={editingAlbum} items={items} preferences={preferences} onClose={() => setEditingAlbum(null)} onChanged={onChanged} />}
     </>
   );
 }
 function EditMedia({
   item,
+  preferences,
   onClose,
   onChanged,
 }: {
   item: Media;
+  preferences: AlbumCustomization[];
   onClose: () => void;
   onChanged: (m: string) => Promise<void>;
 }) {
   const [title, setTitle] = useState(item.title),
     [date, setDate] = useState(item.date),
-    [album, setAlbum] = useState(item.album),
+    [album, setAlbum] = useState(albumTitle(item.album, preferences)),
     [tags, setTags] = useState(item.tags.join(", ")),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -434,7 +447,7 @@ function EditMedia({
             await api("/media/" + item.id, "PATCH", {
               title,
               date,
-              album,
+              album: albumKey(album, preferences),
               tags: [
                 ...new Set(
                   tags
