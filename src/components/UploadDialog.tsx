@@ -10,6 +10,7 @@ import {
 import { Dialog } from "./Dialog";
 import { bytes, today, upload } from "../lib";
 import { prepareImage } from "../prepare-image";
+import { readCaptureMetadata } from "../photo-metadata";
 import { cloudEnabled } from "../cloud/config";
 import { loadDraft, saveDraft, type UploadItem as Item } from "../upload-queue";
 export function UploadDialog({
@@ -162,6 +163,18 @@ export function UploadDialog({
         change(i, { status: "uploading", error: undefined, progress: 0 });
         try {
           change(i, { status: "preparing" });
+          // Read the original before HEIC conversion; retries keep the stored result.
+          if (type === "memories" && !remaining[i].metadataRead) {
+            const metadata = await readCaptureMetadata(remaining[i].file);
+            const patch = {
+              metadataRead: true,
+              capturedAt: metadata?.capturedAt || null,
+              captureOffset: metadata?.captureOffset || null,
+            };
+            remaining[i] = { ...remaining[i], ...patch };
+            change(i, patch);
+            await saveDraft(draft(remaining)).catch(() => {});
+          }
           const prepared =
             type === "memories"
               ? await prepareImage(items[i].file, maxFile, (message) =>
@@ -178,7 +191,17 @@ export function UploadDialog({
                 items.length === 1 && title.trim()
                   ? title.trim()
                   : items[i].file.name.replace(/\.[^.]+$/, "").slice(0, 150),
-              date,
+              ...(type === "memories" && !cloudEnabled
+                ? {
+                    autoDate: "true",
+                    ...(remaining[i].capturedAt
+                      ? { capturedAt: remaining[i].capturedAt! }
+                      : {}),
+                    ...(remaining[i].captureOffset
+                      ? { captureOffset: remaining[i].captureOffset! }
+                      : {}),
+                  }
+                : { date }),
               album,
               tags: JSON.stringify(tagList),
               artist,
@@ -401,17 +424,7 @@ export function UploadDialog({
         )}
         {type === "memories" ? (
           <>
-            <div className="form-row">
-              <label>
-                Fecha del recuerdo
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  disabled={busy}
-                />
-              </label>
+            <div>
               <label>
                 Álbum
                 <input
@@ -443,6 +456,10 @@ export function UploadDialog({
                 </datalist>
               </label>
             </div>
+            <p className="date-explanation">
+              La fecha y hora se leen de cada foto, antes de prepararla. Si no
+              trae una fecha original, usamos el momento en que la subís.
+            </p>
             <label>
               Etiquetas
               <input

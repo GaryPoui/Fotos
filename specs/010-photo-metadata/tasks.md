@@ -1,10 +1,10 @@
 # Tasks: Fechas automáticas
 ## Phase 1: Setup
 - [x] T001 Guardar main y tag de recuperación en Git; definir spec y checklist en specs/010-photo-metadata/.
-- [ ] T002 Verificar respaldo completo privado de originales y library en backups/pre-photo-metadata-2026-10-09/.
+- [x] T002 Verificar respaldo completo privado de originales y library en backups/pre-photo-metadata-2026-10-09/.
 ## Phase 2: Foundation
-- [ ] T003 Cubrir validación de calendario, zona y preservación histórica en tests/metadata.test.ts y tests/api.test.ts.
-- [ ] T004 Añadir campos opcionales y funciones temporales compartidas en shared/types.ts y shared/media-time.ts.
+- [x] T003 Cubrir validación de calendario, zona y preservación histórica en tests/metadata.test.ts y tests/api.test.ts.
+- [x] T004 Añadir campos opcionales y funciones temporales compartidas en shared/types.ts y shared/media-time.ts.
 ## Phase 3: User Story 1
 - [ ] T005 [US1] Leer fechas selectivamente del original en src/photo-metadata.ts; capturedAt formato calendario real YYYY-MM-DDTHH:mm:ss, captureOffset ±HH:mm máximo ±14:00.
 - [ ] T006 [US1] Conservar metadataRead y fechas por ítem antes de conversión/reanudación en src/upload-queue.ts y src/components/UploadDialog.tsx; quitar fecha manual al subir.

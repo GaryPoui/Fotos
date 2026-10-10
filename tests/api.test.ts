@@ -69,6 +69,78 @@ describe("Private space", () => {
 });
 
 describe("Persistent memories", () => {
+  it("reads original capture time automatically, preserves edits, and uses upload time when absent", async () => {
+    await login();
+    const jpeg = await sharp(png)
+      .withExif({
+        IFD0: {},
+        IFD2: {
+          DateTimeOriginal: "2020:12:31 23:58:07",
+          OffsetTimeOriginal: "-03:00",
+        },
+      })
+      .jpeg()
+      .toBuffer();
+    const created = await agent
+      .post("/api/media")
+      .set(mutation)
+      .field("autoDate", "true")
+      .field("title", "Título original")
+      .attach("file", jpeg, "original.jpg")
+      .expect(201);
+    expect(created.body).toMatchObject({
+      date: "2020-12-31",
+      capturedAt: "2020-12-31T23:58:07",
+      captureOffset: "-03:00",
+      dateSource: "metadata",
+    });
+    const edited = await agent
+      .patch("/api/media/" + created.body.id)
+      .set(mutation)
+      .send({ title: "Título editado", favorite: true })
+      .expect(200);
+    expect(edited.body).toMatchObject({
+      capturedAt: created.body.capturedAt,
+      captureOffset: "-03:00",
+      date: "2020-12-31",
+    });
+    const original = await agent
+      .get("/api/files/" + created.body.id)
+      .expect(200);
+    expect(original.body).toEqual(jpeg);
+    const fallback = await agent
+      .post("/api/media")
+      .set(mutation)
+      .field("autoDate", "true")
+      .attach("file", png, "sin-fecha.png")
+      .expect(201);
+    expect(fallback.body).toMatchObject({
+      capturedAt: null,
+      captureOffset: null,
+      dateSource: "upload",
+    });
+    const converted = await agent
+      .post("/api/media")
+      .set(mutation)
+      .field("autoDate", "true")
+      .field("capturedAt", "2021-01-02T03:04:05")
+      .field("captureOffset", "-03:00")
+      .attach("file", png, "convertida.png")
+      .expect(201);
+    expect(converted.body).toMatchObject({
+      date: "2021-01-02",
+      capturedAt: "2021-01-02T03:04:05",
+      dateSource: "metadata",
+    });
+    await agent
+      .post("/api/media")
+      .set(mutation)
+      .field("autoDate", "true")
+      .field("capturedAt", "2021-02-30T03:04:05")
+      .attach("file", png, "invalida.png")
+      .expect(400);
+    expect((await agent.get("/api/library")).body.media).toHaveLength(3);
+  });
   it("uploads, edits, streams privately with ranges and deletes a photo", async () => {
     await login();
     const created = await agent

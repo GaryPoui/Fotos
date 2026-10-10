@@ -11,6 +11,11 @@ import {
 } from "lucide-react";
 import type { Media } from "../../shared/types";
 import { formatDate, mediaUrl } from "../lib";
+import {
+  dateSourceLabel,
+  memoryTimeLabel,
+  uploadedClock,
+} from "../../shared/media-time.js";
 import { Dialog } from "./Dialog";
 import { Coverflow } from "./Coverflow";
 export function Viewer({
@@ -38,8 +43,11 @@ export function Viewer({
         items.findIndex((i) => i.id === initialId),
       ),
     ),
-    [auto, setAuto] = useState(() =>
-      inline && items.length > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [auto, setAuto] = useState(
+      () =>
+        inline &&
+        items.length > 1 &&
+        !matchMedia("(prefers-reduced-motion: reduce)").matches,
     ),
     [hidden, setHidden] = useState(document.hidden),
     [failed, setFailed] = useState(false);
@@ -114,9 +122,13 @@ export function Viewer({
           }
         }}
         onTouchStart={(e) => {
-          touch.current = e.target instanceof HTMLVideoElement ? null : {
-            x: e.touches[0].clientX, y: e.touches[0].clientY,
-          };
+          touch.current =
+            e.target instanceof HTMLVideoElement
+              ? null
+              : {
+                  x: e.touches[0].clientX,
+                  y: e.touches[0].clientY,
+                };
         }}
         onTouchEnd={(e) => {
           if (touch.current !== null) {
@@ -129,13 +141,24 @@ export function Viewer({
           }
           touch.current = null;
         }}
-        onTouchCancel={() => { touch.current = null; }}
+        onTouchCancel={() => {
+          touch.current = null;
+        }}
       >
         {inline ? (
-          <Coverflow items={items} index={index % items.length}
-            onSelect={(offset) => { step(offset); setAuto(false); }}
-            onOpen={(id) => { setAuto(false); onOpen?.(id); }}
-            onPlay={() => setAuto(false)} />
+          <Coverflow
+            items={items}
+            index={index % items.length}
+            onSelect={(offset) => {
+              step(offset);
+              setAuto(false);
+            }}
+            onOpen={(id) => {
+              setAuto(false);
+              onOpen?.(id);
+            }}
+            onPlay={() => setAuto(false)}
+          />
         ) : failed ? (
           <div className="media-failed">
             <p>No pudimos abrir este archivo.</p>
@@ -209,7 +232,21 @@ export function Viewer({
           <h3>{item.title}</h3>
           <p>
             {formatDate(item.date, true)}
+            {memoryTimeLabel(item)}
             {item.album && " · " + item.album}
+          </p>
+          <p className="date-explanation">
+            {dateSourceLabel(item)}
+            {item.captureOffset ? " · UTC" + item.captureOffset : ""}
+            {uploadedClock(item.createdAt) && (
+              <>
+                <br />
+                Subido: {formatDate(
+                  uploadedClock(item.createdAt).slice(0, 10),
+                )}{" "}
+                · {uploadedClock(item.createdAt).slice(11, 16)} (Argentina)
+              </>
+            )}
           </p>
           {item.tags.length > 0 && (
             <div className="tags">

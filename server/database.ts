@@ -17,7 +17,7 @@ export function postgresSql(sql: string) {
   let parameter = 0;
   return sql
     .replace(/\?/g, () => "$" + ++parameter)
-    .replace(/\b(createdAt|storedBytes)\b/g, '"$1"')
+    .replace(/\b(createdAt|storedBytes|capturedAt|captureOffset|dateSource)\b/g, '"$1"')
     .replace(/\b(meta|sessions|media|notes)\b/g, "rincon.$1");
 }
 

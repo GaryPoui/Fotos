@@ -26,6 +26,12 @@ import { openDatabase, type Database } from "./database.js";
 import type { ObjectStorage } from "./cloud-storage.js";
 import { inspectFile, thumbnail } from "./files.js";
 import type { Media, Note, Settings } from "../shared/types.js";
+import {
+  validCaptureDate,
+  validCaptureOffset,
+  uploadedClock,
+} from "../shared/media-time.js";
+import { readCaptureMetadata } from "../shared/photo-metadata.js";
 
 const hash = (value: string | Buffer) =>
   createHash("sha256").update(value).digest("hex");
@@ -360,8 +366,8 @@ export async function createApp(options: AppOptions) {
     limits: {
       fileSize: maxFile,
       files: 1,
-      fields: 8,
-      parts: 9,
+      fields: 10,
+      parts: 11,
       fieldSize: 4096,
     },
   }).single("file");
@@ -419,6 +425,36 @@ export async function createApp(options: AppOptions) {
           413,
           "El espacio está lleno. Borrá algún archivo o ampliá el almacenamiento.",
         );
+      const createdAt = new Date().toISOString();
+      let capturedAt: string | null = null,
+        captureOffset: string | null = null;
+      const automatic =
+        detected.kind !== "audio" &&
+        (req.body.autoDate === "true" || !req.body.date);
+      if (automatic) {
+        const metadata = z
+          .object({
+            capturedAt: z.string().refine(validCaptureDate).optional(),
+            captureOffset: z.string().refine(validCaptureOffset).optional(),
+          })
+          .parse({
+            capturedAt: req.body.capturedAt || undefined,
+            captureOffset: req.body.captureOffset || undefined,
+          });
+        capturedAt = metadata.capturedAt || null;
+        captureOffset = metadata.captureOffset || null;
+        if (!capturedAt && detected.kind === "photo") {
+          const original = await readCaptureMetadata(tempPath);
+          capturedAt = original?.capturedAt || null;
+          captureOffset = original?.captureOffset || null;
+        }
+        input.date = (capturedAt || uploadedClock(createdAt)).slice(0, 10);
+      }
+      const dateSource = automatic
+        ? capturedAt
+          ? "metadata"
+          : "upload"
+        : "manual";
       const id = uploadId,
         filename = id + "." + detected.ext;
       if (detected.kind === "photo") {
@@ -453,7 +489,7 @@ export async function createApp(options: AppOptions) {
       }
       await db
         .prepare(
-          "INSERT INTO media (id,kind,filename,mime,size,title,date,album,tags,artist,createdAt,storedBytes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO media (id,kind,filename,mime,size,title,date,album,tags,artist,createdAt,storedBytes,capturedAt,captureOffset,dateSource) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         )
         .run(
           id,
@@ -466,8 +502,11 @@ export async function createApp(options: AppOptions) {
           input.album,
           JSON.stringify(input.tags),
           input.artist,
-          new Date().toISOString(),
+          createdAt,
           storedBytes,
+          capturedAt,
+          captureOffset,
+          dateSource,
         );
       committed = true;
       target = "";
