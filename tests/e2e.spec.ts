@@ -729,7 +729,7 @@ for (const mode of ["normal", "blocked", "native-volume-ignored"] as const) {
 }
 
 test("responsive albums stay contained and modal fits with many memories", async ({ page }, info) => {
-  const media = Array.from({ length: 16 }, (_, i) => ({ id: "demo-responsive-" + i, kind: "photo", title: "Vista demo " + i + " · " + "Un recuerdo muy especial juntos ".repeat(8), date: "2026-09-01", album: "Álbum " + String(i).padStart(2, "0") + " · " + "Juntos".repeat(6), tags: ["Demo"], favorite: false, artist: "", mime: "image/png", size: png.length, createdAt: "2026-09-01T12:00:00Z" }));
+  const media = Array.from({ length: 145 }, (_, i) => ({ id: "demo-responsive-" + i, kind: "photo", title: "Vista demo " + i + " · " + "Un recuerdo muy especial juntos ".repeat(8), date: "2026-09-01", album: "Álbum " + String(i % 16).padStart(2, "0") + " · " + "Juntos".repeat(6), tags: ["Demo"], favorite: false, artist: "", mime: "image/png", size: png.length, createdAt: "2026-09-01T12:00:00Z" }));
   await page.route("**/api/library", async route => {
     const original = await (await route.fetch()).json();
     await route.fulfill({ json: { ...original, media, notes: [], settings: { names: "Ailu y Tomy", title: "Nuestro rincón", since: "2026-08-29", coverId: media[0].id, featuredId: media[1].id } } });
