@@ -13,3 +13,12 @@ Only album preference JSON upsert in existing private meta; no schema changes, b
 - Render dep-db4pn9942hec73eht4ag: Deploy succeeded / Live, source039d73f,2026-10-09 22:57 ART. HTTPS frontend index-D8sPOMTc.js matches the build.
 - Public synthetic checks360/390/1440: edit name/cover, reload, cover URL, filters and viewer labels; no page errors. Saves intercepted in browser, no personal albums modified. Published authenticated API returns albums and rejects nonexistent groups404 without a write. Screenshot test-results/render-album-editor-390.png inspected.
 - Post-deploy PostgreSQL comparison: columns and every previous media/notes/meta row unchanged, including titles, manual dates and earlier capture records. All151 original files match pre-deploy sizes and SHA-256; the3 notes, names, dates, albums, tags, favorites and settings match. Reports saved privately beside the backup. All10 tasks complete; no extension hooks configured.
+
+## Follow-up visual — 2026-10-10
+- FR-009 implemented: pencil14px and visible circle28px over the cover's top-right corner, within44px touch target; descriptive accessible name and keyboard focus preserved. Separate sibling buttons open the album and its editor.
+- Changes limited to Revisit.tsx and styles.css plus Spec Kit documentation; no backend, storage, schema, content or saved album preference writes.
+- Build/TypeScript PASS; existing album editing and responsive browser checks4/4 PASS mobile/desktop.
+- Code41801fd pushed; [CI38061785656](https://github.com/GaryPoui/Fotos/actions/runs/38061785656) SUCCESS, including full browser suite and Docker persistence.
+- Render dep-db557559fdbs73bli8ig Deploy succeeded / Live, source41801fd,2026-10-10 12:02 ART; frontend index-BHZ5AtC6.js matches local build.
+- Public synthetic360/390/1440px checks PASS: button inside top-right cover,44px target,28px circle,14px icon, no horizontal overflow, editor opens/cancels and album opens normally; no page errors. Album mutations blocked by the isolated check; no personal content edited. Screenshot test-results/render-album-button-390.png inspected.
+- All12 tasks complete; no extension hooks configured.

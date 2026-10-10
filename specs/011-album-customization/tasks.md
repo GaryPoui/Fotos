@@ -16,7 +16,7 @@
 - [x] T010 Commit/push, CI, publicar Render y verificar UI sintética y contenido histórico contra respaldo; evidencia en specs/011-album-customization/verification.md.
 ## Phase 6: Follow-up visual
 - [x] T011 Mover el acceso a editar a la esquina superior derecha de la portada en src/components/Revisit.tsx y src/styles.css: lápiz pequeño, nombre accesible y control táctil44px.
-- [ ] T012 Compilar, verificar edición y responsive móvil/PC, commit/push, CI, publicar Render y revisar el botón con datos sintéticos; registrar evidencia sin modificar contenido personal.
+- [x] T012 Compilar, verificar edición y responsive móvil/PC, commit/push, CI, publicar Render y revisar el botón con datos sintéticos; registrar evidencia sin modificar contenido personal.
 
 ## Dependencies
 T001 → T002/T003 → T004 → T005 → T006/T007 → T008 → T009 → T010. US1 y US2 comparten editor; deben publicarse juntas.
