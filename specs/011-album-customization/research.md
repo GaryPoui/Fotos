@@ -1,0 +1,6 @@
+# Research
+- Decision: personalización separada en meta con clave album:<nombre codificado>. Rationale: álbumes actuales son grupos por Media.album; identidad estable evita UPDATE masivo, división de grupos y transacciones nuevas. Alternative: renombrar cada media introduce escrituras innecesarias y fallos parciales.
+- Decision: nombres visibles resueltos centralmente; controles guardan clave canónica. Rationale: mantiene selección y nuevos uploads tras editar; rechazar colisiones con nombres visibles y claves existentes evita ambigüedad.
+- Decision: portada es referencia a foto del álbum; fallback automático si cambia de grupo o se elimina. Rationale: ningún archivo se reemplaza, costo extra cero. Alternative: subir archivo de portada separado innecesario para este pedido.
+- Investigación read-only por agente solicitado por skill plan confirmó superficies: Revisit, Gallery, Viewer, UploadDialog/EditMedia y exportación ZIP. Riesgos de selección documentados en tareas.
+- Fuentes verificadas: https://supabase.com/changelog.md y https://supabase.com/docs/guides/database/tables.md. Cambios recientes no alteran almacenamiento meta privado con conexión PG y permisos existentes. No se añaden tablas, RLS, claves ni Storage público.
