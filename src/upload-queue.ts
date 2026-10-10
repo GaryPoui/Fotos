@@ -6,9 +6,6 @@ export type UploadItem = {
   status: "pending" | "preparing" | "uploading" | "done" | "error";
   progress: number;
   error?: string;
-  metadataRead?: boolean;
-  capturedAt?: string | null;
-  captureOffset?: string | null;
 };
 export type UploadDraft = {
   type: "memories" | "music";

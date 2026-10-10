@@ -18,15 +18,6 @@ import { Confirm, Dialog } from "./Dialog";
 import { Revisit } from "./Revisit";
 import { onThisDay } from "../moments";
 import { Viewer } from "./Viewer";
-import {
-  dateSourceLabel,
-  emptyTimeFilter,
-  matchesTime,
-  memoryClock,
-  memoryTimeLabel,
-  uploadedClock,
-  type TimeFilter,
-} from "../../shared/media-time.js";
 type View = "grid" | "timeline" | "carousel";
 export function Gallery({
   items,
@@ -44,13 +35,6 @@ export function Gallery({
   onError: (e: string) => void;
 }) {
   const [dayOnly, setDayOnly] = useState(false);
-  const [timeFilter, setTimeFilter] = useState(emptyTimeFilter);
-  const [timeReference, setTimeReference] = useState("memory");
-  const clearTime = () => setTimeFilter(emptyTimeFilter());
-  const clock = (item: Media) =>
-    timeReference === "upload"
-      ? uploadedClock(item.createdAt)
-      : memoryClock(item);
   const [query, setQuery] = useState(""),
     [album, setAlbum] = useState(""),
     [kind, setKind] = useState(""),
@@ -75,7 +59,6 @@ export function Gallery({
       setKind("");
       setFavorites(false);
       setDayOnly(false);
-      clearTime();
       setSelected(requestedMemory.id);
     }
   }, [requestedMemory]);
@@ -88,7 +71,6 @@ export function Gallery({
             (!album || item.album === album) &&
             (!kind || item.kind === kind) &&
             (!favorites || item.favorite) &&
-            matchesTime(clock(item), timeFilter) &&
             [item.title, item.album, ...item.tags]
               .join(" ")
               .toLocaleLowerCase("es")
@@ -96,23 +78,10 @@ export function Gallery({
         )
         .sort((a, b) =>
           sort === "asc"
-            ? clock(a).localeCompare(clock(b)) ||
-              a.createdAt.localeCompare(b.createdAt)
-            : clock(b).localeCompare(clock(a)) ||
-              b.createdAt.localeCompare(a.createdAt),
+            ? a.date.localeCompare(b.date)
+            : b.date.localeCompare(a.date),
         ),
-    [
-      items,
-      album,
-      kind,
-      favorites,
-      query,
-      sort,
-      dayOnly,
-      calendarToday,
-      timeFilter,
-      timeReference,
-    ],
+    [items, album, kind, favorites, query, sort, dayOnly, calendarToday],
   );
   const albums = [...new Set(items.map((i) => i.album).filter(Boolean))].sort();
   useEffect(() => {
@@ -166,9 +135,7 @@ export function Gallery({
       <div className="memory-caption">
         <h3>{item.title}</h3>
         <p>
-          {timeReference === "upload" ? "Subida: " : ""}
-          {formatDate(clock(item).slice(0, 10))}
-          {clock(item).slice(11, 16) ? " · " + clock(item).slice(11, 16) : ""}
+          {formatDate(item.date)}
           {item.album && <span> · {item.album}</span>}
         </p>
       </div>
@@ -186,7 +153,6 @@ export function Gallery({
           setKind("");
           setFavorites(false);
           setDayOnly(false);
-          clearTime();
           setSelected(id);
         }}
         onAlbum={(name) => {
@@ -195,7 +161,6 @@ export function Gallery({
           setQuery("");
           setKind("");
           setFavorites(false);
-          clearTime();
         }}
         onDay={() => {
           setDayOnly(true);
@@ -203,7 +168,6 @@ export function Gallery({
           setQuery("");
           setKind("");
           setFavorites(false);
-          clearTime();
         }}
       />
       {(dayOnly || album) && (
@@ -295,17 +259,6 @@ export function Gallery({
           <span>Favoritos</span>
         </button>
       </div>
-      {Object.values(timeFilter).some(Boolean) && (
-        <div className="active-memory-filter" role="status">
-          <span>
-            Fecha filtrada ·{" "}
-            {timeReference === "upload" ? "subida" : "recuerdo"}
-          </span>
-          <button className="button secondary" onClick={clearTime}>
-            Limpiar fecha y hora
-          </button>
-        </div>
-      )}
       {filters && (
         <div className="filter-panel">
           <label>
@@ -332,91 +285,6 @@ export function Gallery({
               <option value="asc">Más antiguos primero</option>
             </select>
           </label>
-          <label>
-            Fecha de referencia
-            <select
-              value={timeReference}
-              onChange={(e) => setTimeReference(e.target.value)}
-            >
-              <option value="memory">Fecha del recuerdo</option>
-              <option value="upload">Fecha de subida (Argentina)</option>
-            </select>
-          </label>
-          {(
-            [
-              [
-                "year",
-                "Año",
-                [
-                  ...new Set(
-                    items
-                      .map((item) => clock(item).slice(0, 4))
-                      .filter(Boolean),
-                  ),
-                ]
-                  .sort()
-                  .reverse(),
-              ],
-              [
-                "month",
-                "Mes",
-                Array.from({ length: 12 }, (_, i) =>
-                  String(i + 1).padStart(2, "0"),
-                ),
-              ],
-              [
-                "day",
-                "Día",
-                Array.from({ length: 31 }, (_, i) =>
-                  String(i + 1).padStart(2, "0"),
-                ),
-              ],
-              [
-                "hour",
-                "Hora",
-                Array.from({ length: 24 }, (_, i) =>
-                  String(i).padStart(2, "0"),
-                ),
-              ],
-              [
-                "minute",
-                "Minuto",
-                Array.from({ length: 60 }, (_, i) =>
-                  String(i).padStart(2, "0"),
-                ),
-              ],
-            ] as [keyof TimeFilter, string, string[]][]
-          ).map(([key, label, values]) => (
-            <label key={key}>
-              {label}
-              <select
-                value={timeFilter[key]}
-                onChange={(e) =>
-                  setTimeFilter((old) => ({ ...old, [key]: e.target.value }))
-                }
-              >
-                <option value="">
-                  {key === "year" || key === "day" || key === "minute"
-                    ? "Todos"
-                    : "Todas"}
-                </option>
-                {values.map((value) => (
-                  <option value={value} key={value}>
-                    {key === "month"
-                      ? new Intl.DateTimeFormat("es-AR", {
-                          month: "long",
-                        }).format(new Date(`2000-${value}-15T12:00:00`))
-                      : value}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-          <p className="date-explanation temporal-help">
-            Las fotos nuevas usan su fecha original. Sin metadatos, usamos la
-            subida. Los recuerdos anteriores conservan su fecha; la hora puede
-            ser desconocida.
-          </p>
         </div>
       )}
       {!items.length ? (
@@ -456,7 +324,6 @@ export function Gallery({
               setKind("");
               setFavorites(false);
               setDayOnly(false);
-              clearTime();
             }}
           >
             Ver todos los recuerdos
@@ -478,7 +345,7 @@ export function Gallery({
         <div className="memory-grid">{filtered.map(card)}</div>
       ) : (
         <div className="timeline">
-          {[...new Set(filtered.map((i) => clock(i).slice(0, 7)))].map(
+          {[...new Set(filtered.map((i) => i.date.slice(0, 7)))].map(
             (month) => (
               <section key={month}>
                 <h3 className="month-label">
@@ -489,7 +356,7 @@ export function Gallery({
                   }).format(new Date(month + "-15T12:00:00"))}
                 </h3>
                 <div className="memory-grid">
-                  {filtered.filter((i) => clock(i).startsWith(month)).map(card)}
+                  {filtered.filter((i) => i.date.startsWith(month)).map(card)}
                 </div>
               </section>
             ),
@@ -551,8 +418,6 @@ function EditMedia({
   onClose: () => void;
   onChanged: (m: string) => Promise<void>;
 }) {
-  const automaticDate =
-    item.dateSource === "metadata" || item.dateSource === "upload";
   const [title, setTitle] = useState(item.title),
     [date, setDate] = useState(item.date),
     [album, setAlbum] = useState(item.album),
@@ -598,25 +463,15 @@ function EditMedia({
           />
         </label>
         <div className="form-row">
-          {automaticDate ? (
-            <div className="date-explanation">
-              <strong>
-                {formatDate(item.date)}
-                {memoryTimeLabel(item)}
-              </strong>
-              <p>{dateSourceLabel(item)}</p>
-            </div>
-          ) : (
-            <label>
-              Fecha
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </label>
-          )}
+          <label>
+            Fecha
+            <input
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
           <label>
             Álbum
             <input

@@ -37,11 +37,18 @@ try {
   await page
     .getByLabel("Fotos y videos", { exact: true })
     .setInputFiles({
-      name: "cielo.jpg",
-      mimeType: "image/jpeg",
-      buffer: readFileSync("tests/fixtures/cielo-timestamp.jpg"),
+      name: "cielo.png",
+      mimeType: "image/png",
+      buffer: readFileSync("tests/fixtures/cielo.png"),
     });
   await page.getByLabel("Título", { exact: true }).fill(title);
+  const now = new Date(),
+    date = [
+      now.getFullYear() - 4,
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+  await page.getByLabel("Fecha del recuerdo", { exact: true }).fill(date);
   await page.getByLabel("Álbum", { exact: true }).fill(album);
   await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });

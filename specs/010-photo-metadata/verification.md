@@ -1,5 +1,15 @@
 # Verification — 2026-10-09
 
+## Current correction: restore manual dates
+- User requested removal of automatic dates because they were not working. Runtime upload, editing, gallery and viewer restored to 738926d behavior; previous responsive, carousel and music changes retained.
+- Fresh private backup in backups/pre-manual-date-restore-2026-10-09/: 151 originals, 183685076 bytes, 2 notes; verified SHA-256, stable library snapshot and read-only raw PostgreSQL snapshot. Includes the new photo added since the previous backup.
+- npm run build: PASS. npm test: 33 passed, 5 Firebase emulator tests skipped. New integration regression confirms startup does not change an automatic upload, manual date edits work, original bytes are preserved and optional capture records remain intact.
+- No database migration, content deletion, bulk date replacement or credential changes.
+- Complete local mobile/desktop Playwright suite: 30/30 PASS, including manual date upload, same-day memories, private uploads, pause/resume, carousel, background music and responsive albums/modals.
+- Publication and post-deploy preservation checks pending.
+
+The following evidence describes the previous automatic-date release and is retained for history.
+
 ## Recovery and preservation
 - Antes de tocar el código, main 738926d estaba sincronizado con origin/main. Tag anotado backup/pre-photo-metadata-2026-10-09 creado y subido.
 - Respaldo privado completo fuera de Git: 150 originales (145 fotos y 5 canciones), 183599049 bytes, 2 escritos, títulos, álbumes, ajustes y metadatos históricos. Cada original se releyó de la copia y su SHA-256 coincide.

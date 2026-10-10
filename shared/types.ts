@@ -11,9 +11,6 @@ export interface Media {
   mime: string;
   size: number;
   createdAt: string;
-  capturedAt?: string | null;
-  captureOffset?: string | null;
-  dateSource?: "metadata" | "upload" | "manual" | null;
 }
 export interface Note {
   id: string;

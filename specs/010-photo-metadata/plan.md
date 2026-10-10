@@ -2,6 +2,8 @@
 **Branch**: `main` | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
 ## Summary
+Current correction: restore runtime files and existing browser scenarios from commit 738926d, remove the unused EXIF dependency and automatic-date helpers, and keep optional capture records untouched. No schema migration, bulk date update or content deletion. Take a fresh private snapshot, check manual date editing even for a previously automatic upload, run build/integration/browser checks, push and publish on Render, then compare raw database rows and original hashes. The following automatic-date plan is historical.
+
 Leer EXIF del original antes de prepareImage, conservar por ítem en IndexedDB, persistir campos opcionales sin tocar registros históricos y filtrar en Gallery con reloj de cámara o subida argentina.
 
 ## Technical Context

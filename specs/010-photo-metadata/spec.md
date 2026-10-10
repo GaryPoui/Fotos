@@ -2,10 +2,18 @@
 
 **Feature Branch**: `main` (publicación autorizada)
 **Created**: 2026-10-09
-**Status**: Implemented and verified
+**Status**: Automatic dates withdrawn at user request; manual dates restored
 **Input**: Leer metadatos en lugar de seleccionar fecha; filtrar por día, mes, año, hora y minuto; subir antes la versión actual y conservar todo el contenido.
 
 ## User Scenarios & Testing
+### Current correction - Restore manual dates (2026-10-09)
+User requested: «deja lo de las fechas como estaba antes porque no esta andando».
+The original automatic-date requirements below remain as historical documentation and are superseded by:
+- **FR-R01**: Upload and editing MUST offer the previous manual date selector for every memory.
+- **FR-R02**: Gallery filters, sorting and viewer MUST use their previous date behavior, without automatic EXIF reading or minute filters.
+- **FR-R03**: Publishing MUST preserve every existing record, stored date, original file, title, letter, song, album and preference, including optional capture metadata retained in storage.
+- **SC-R01**: Manual upload and date editing pass mobile and desktop browser checks; database rows and original hashes remain unchanged after publishing.
+
 ### User Story 1 - Guardar cada foto en su momento (Priority: P1)
 Subo una tanda sin elegir una fecha compartida y cada foto conserva la fecha y hora en que fue tomada.
 **Why this priority**: Evita asignar a una tanda completa el mismo día.

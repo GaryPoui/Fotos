@@ -1,8 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
-const datedJpeg = readFileSync(
-  new URL("./fixtures/cielo-timestamp.jpg", import.meta.url),
-);
 const png = readFileSync(new URL("./fixtures/cielo.png", import.meta.url));
 const headers = { "X-Requested-With": "NuestroRincon" };
 async function login(page: Page) {
@@ -308,34 +305,21 @@ test("video uploads privately and opens paused with working playback", async ({
     .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime))
     .toBeGreaterThan(0);
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();
-  const companion = await page.request.post("/api/media", {
-    headers,
-    multipart: {
-      file: { name: "companion.png", mimeType: "image/png", buffer: png },
-      title: title + " compañía",
-      date: "2020-01-01",
-    },
-  });
+  const companion = await page.request.post('/api/media', {headers, multipart: {
+    file: {name:'companion.png',mimeType:'image/png',buffer:png},
+    title: title + ' compañía', date:'2020-01-01',
+  }});
   const companionId = (await companion.json()).id;
   await page.reload();
-  await page.getByLabel("Buscar recuerdos").fill(title);
-  await page.getByRole("button", { name: "Carrusel", exact: true }).click();
-  const inlineVideo = page.locator(".coverflow-card video");
-  await expect
-    .poll(() => inlineVideo.evaluate((v: HTMLVideoElement) => v.readyState))
-    .toBeGreaterThan(0);
-  expect(await inlineVideo.evaluate((v: HTMLVideoElement) => v.paused)).toBe(
-    true,
-  );
-  await inlineVideo.evaluate((v: HTMLVideoElement) => {
-    v.currentTime = 0;
-    return v.play();
-  });
-  await page.getByRole("button", { name: "Recuerdo siguiente" }).click();
-  await expect
-    .poll(() => inlineVideo.evaluate((v: HTMLVideoElement) => v.paused))
-    .toBe(true);
-  await page.request.delete("/api/media/" + companionId, { headers });
+  await page.getByLabel('Buscar recuerdos').fill(title);
+  await page.getByRole('button',{name:'Carrusel',exact:true}).click();
+  const inlineVideo = page.locator('.coverflow-card video');
+  await expect.poll(()=>inlineVideo.evaluate((v:HTMLVideoElement)=>v.readyState)).toBeGreaterThan(0);
+  expect(await inlineVideo.evaluate((v:HTMLVideoElement)=>v.paused)).toBe(true);
+  await inlineVideo.evaluate((v:HTMLVideoElement)=>{v.currentTime=0;return v.play();});
+  await page.getByRole('button',{name:'Recuerdo siguiente'}).click();
+  await expect.poll(()=>inlineVideo.evaluate((v:HTMLVideoElement)=>v.paused)).toBe(true);
+  await page.request.delete('/api/media/'+companionId,{headers});
   await assertFits(page);
 });
 
@@ -504,25 +488,14 @@ test("same-day memories and album cards navigate real dated photos", async ({
       String(now.getDate()).padStart(2, "0"),
     ].join("-");
   const title = "Nuestro día " + info.project.name;
-  const original = Buffer.from(datedJpeg);
-  Buffer.from(day.replace(/-/g, ":") + " 12:30:00").copy(
-    original,
-    original.indexOf("2021:02:14 23:58:07"),
-  );
   await page
     .getByRole("button", { name: "Subir recuerdos", exact: true })
     .click();
   await page
     .getByLabel("Fotos y videos", { exact: true })
-    .setInputFiles({
-      name: "cielo.jpg",
-      mimeType: "image/jpeg",
-      buffer: original,
-    });
+    .setInputFiles({ name: "cielo.png", mimeType: "image/png", buffer: png });
   await page.getByLabel("Título", { exact: true }).fill(title);
-  await expect(
-    page.getByLabel("Fecha del recuerdo", { exact: true }),
-  ).toHaveCount(0);
+  await page.getByLabel("Fecha del recuerdo", { exact: true }).fill(day);
   await page.getByRole("button", { name: "Aniversarios", exact: true }).click();
   await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -550,139 +523,6 @@ test("same-day memories and album cards navigate real dated photos", async ({
   await assertFits(page);
 });
 
-test("photo metadata survives retry and filters by capture minute without manual dates", async ({
-  page,
-}, info) => {
-  await login(page);
-  if (info.project.name === "mobile")
-    await page.setViewportSize({ width: 360, height: 780 });
-  const title = "Metadatos " + info.project.name;
-  const album = "Fechas " + info.project.name;
-  const jpeg = datedJpeg;
-  let once = true;
-  await page.route("**/api/media", async (route) => {
-    if (route.request().method() === "POST" && once) {
-      once = false;
-      await route.abort("failed");
-    } else await route.continue();
-  });
-  await page
-    .getByRole("button", { name: "Subir recuerdos", exact: true })
-    .click();
-  await page
-    .getByLabel("Fotos y videos", { exact: true })
-    .setInputFiles({
-      name: "original.jpg",
-      mimeType: "image/jpeg",
-      buffer: jpeg,
-    });
-  await page.getByLabel("Título", { exact: true }).fill(title);
-  await page.getByLabel("Álbum", { exact: true }).fill(album);
-  await expect(page.locator('dialog input[type="date"]')).toHaveCount(0);
-  await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
-  await expect(page.getByRole("alert")).toContainText("Algunos archivos");
-  // Simulate conversion discarding EXIF after metadata was saved, then retry from IndexedDB.
-  await page.evaluate(async (bytes) => {
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open("rincon-pending-uploads", 1);
-      request.onsuccess = () => {
-        const db = request.result,
-          tx = db.transaction("drafts", "readwrite"),
-          store = tx.objectStore("drafts");
-        const read = store.get("memories");
-        read.onsuccess = () => {
-          const draft = read.result;
-          draft.items[0].file = new File(
-            [new Uint8Array(bytes)],
-            "convertida.png",
-            { type: "image/png" },
-          );
-          store.put(draft, "memories");
-        };
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        tx.onerror = () => reject(tx.error);
-      };
-      request.onerror = () => reject(request.error);
-    });
-  }, Array.from(png));
-  await page.reload();
-  await page
-    .getByRole("button", { name: "Retomar 1 recuerdo", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  const library = await (await page.request.get("/api/library")).json();
-  const found = library.media.filter(
-    (m: { title: string }) => m.title === title,
-  );
-  expect(found).toHaveLength(1);
-  expect(found[0]).toMatchObject({
-    date: "2021-02-14",
-    capturedAt: "2021-02-14T23:58:07",
-    captureOffset: "-03:00",
-    dateSource: "metadata",
-    mime: "image/png",
-  });
-  await uploadPhoto(page, "Sin metadatos " + info.project.name);
-  await page.getByRole("button", { name: "Mostrar filtros" }).click();
-  await page
-    .getByRole("combobox", { name: "Álbum", exact: true })
-    .selectOption(album);
-  for (const [label, value] of [
-    ["Año", "2021"],
-    ["Mes", "02"],
-    ["Día", "14"],
-    ["Hora", "23"],
-    ["Minuto", "58"],
-  ])
-    await page
-      .getByRole("combobox", { name: label, exact: true })
-      .selectOption(value);
-  await expect(
-    page.getByRole("button", { name: "Abrir " + title, exact: true }),
-  ).toBeVisible();
-  await assertFits(page);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(info.project.name === "mobile" ? 360 : 1440);
-  await page.screenshot({
-    path: "test-results/metadata-filters-" + info.project.name + ".png",
-    fullPage: true,
-  });
-  await page
-    .getByRole("button", { name: "Línea de tiempo", exact: true })
-    .click();
-  await expect(page.locator(".month-label")).toContainText("febrero de 2021");
-  await page.getByRole("button", { name: "Carrusel", exact: true }).click();
-  await expect(page.locator(".viewer-info")).toContainText("23:58");
-  await expect(page.locator(".viewer-info")).toContainText(
-    "Fecha original de la foto",
-  );
-  await page.getByRole("button", { name: "Mosaico", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Minuto", exact: true })
-    .selectOption("59");
-  await expect(
-    page.getByRole("heading", { name: "No encontramos ese momento" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Limpiar fecha y hora" }).click();
-  await expect(
-    page.getByRole("button", { name: "Abrir " + title, exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("combobox", { name: "Fecha de referencia", exact: true })
-    .selectOption("upload");
-  await page
-    .getByRole("combobox", { name: "Año", exact: true })
-    .selectOption(found[0].createdAt.slice(0, 4));
-  await expect(
-    page.getByRole("button", { name: "Abrir " + title, exact: true }),
-  ).toBeVisible();
-});
-
 test("logout removes private pending files and TUS references from the device", async ({
   page,
 }) => {
@@ -690,11 +530,13 @@ test("logout removes private pending files and TUS references from the device", 
   await page
     .getByRole("button", { name: "Subir recuerdos", exact: true })
     .click();
-  await page.getByLabel("Fotos y videos", { exact: true }).setInputFiles({
-    name: "pendiente.png",
-    mimeType: "image/png",
-    buffer: png,
-  });
+  await page
+    .getByLabel("Fotos y videos", { exact: true })
+    .setInputFiles({
+      name: "pendiente.png",
+      mimeType: "image/png",
+      buffer: png,
+    });
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Retomar 1 recuerdo", exact: true }),
@@ -724,237 +566,116 @@ test("logout removes private pending files and TUS references from the device", 
   expect(count).toBe(0);
 });
 
-test("coverflow: circular navigation, side selection, swipe, keyboard and reduced motion", async ({
-  page,
-}, info) => {
+test("coverflow: circular navigation, side selection, swipe, keyboard and reduced motion", async ({ page }, info) => {
   await login(page);
   const ids: string[] = [];
   try {
     for (let i = 1; i <= 5; i++) {
-      const response = await page.request.post("/api/media", {
-        headers,
-        multipart: {
-          file: { name: "demo.png", mimeType: "image/png", buffer: png },
-          title: "Demo carrusel " + i,
-          album: "Coverflow " + info.project.name,
-          date: "2026-09-0" + i,
-        },
-      });
+      const response = await page.request.post('/api/media', { headers, multipart: {
+        file: {name: 'demo.png', mimeType: 'image/png', buffer: png},
+        title: 'Demo carrusel ' + i, album: 'Coverflow ' + info.project.name,
+        date: '2026-09-0' + i,
+      }});
       expect(response.status()).toBe(201);
       ids.push((await response.json()).id);
     }
     await page.reload();
-    await page.getByRole("button", { name: "Mostrar filtros" }).click();
-    await page
-      .getByRole("combobox", { name: "Álbum", exact: true })
-      .selectOption("Coverflow " + info.project.name);
-    await page.getByRole("button", { name: "Carrusel", exact: true }).click();
-    const stage = page.getByRole("region", { name: "Carrusel de recuerdos" });
-    await expect(stage.locator(".coverflow-card")).toHaveCount(5);
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 5",
-    );
-    await expect(
-      page.getByRole("button", { name: "Pausar", exact: true }),
-    ).toBeVisible();
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 4",
-      { timeout: 9000 },
-    );
-    await page.getByRole("button", { name: "Pausar", exact: true }).click();
-    await expect(
-      page.getByRole("button", { name: "Presentación", exact: true }),
-    ).toBeVisible();
-    await stage.getByRole("button", { name: "Recuerdo anterior" }).click();
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 5",
-    );
-    await stage.getByRole("button", { name: "Recuerdo anterior" }).click();
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 1",
-    );
+    await page.getByRole('button', {name:'Mostrar filtros'}).click();
+    await page.getByRole('combobox', {name:'Álbum',exact:true}).selectOption('Coverflow ' + info.project.name);
+    await page.getByRole('button', {name:'Carrusel',exact:true}).click();
+    const stage = page.getByRole('region', {name:'Carrusel de recuerdos'});
+    await expect(stage.locator('.coverflow-card')).toHaveCount(5);
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
+    await expect(page.getByRole('button',{name:'Pausar',exact:true})).toBeVisible();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 4',{timeout:9000});
+    await page.getByRole('button',{name:'Pausar',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Presentación',exact:true})).toBeVisible();
+    await stage.getByRole('button',{name:'Recuerdo anterior'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
+    await stage.getByRole('button', {name:'Recuerdo anterior'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 1');
     await stage.focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 5",
-    );
-    const side = stage.getByRole("button", {
-      name: "Ir a Demo carrusel 4",
-      exact: true,
-    });
+    await page.keyboard.press('ArrowRight');
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 5');
+    const side = stage.getByRole('button', {name:'Ir a Demo carrusel 4',exact:true});
     // A perspective card overlaps its neighbors: click its exposed surface,
     // rather than scrolling its projected bounding box into the clipped stage.
-    await expect
-      .poll(() =>
-        side.evaluate((el) => el.parentElement!.getAnimations().length),
-      )
-      .toBe(0);
-    const sidePoint = await side.evaluate((el) => {
+    await expect.poll(()=>side.evaluate(el=>el.parentElement!.getAnimations().length)).toBe(0);
+    const sidePoint = await side.evaluate(el => {
       const rect = el.getBoundingClientRect();
-      for (const y of [0.25, 0.75, 0.5])
-        for (const x of [0.25, 0.5, 0.75]) {
-          const point = {
-            x: rect.left + rect.width * x,
-            y: rect.top + rect.height * y,
-          };
-          if (document.elementFromPoint(point.x, point.y) === el) return point;
-        }
+      for(const y of [.25,.75,.5]) for(const x of [.25,.5,.75]) {
+        const point = {x:rect.left+rect.width*x,y:rect.top+rect.height*y};
+        if(document.elementFromPoint(point.x,point.y)===el) return point;
+      }
       return null;
     });
-    expect(
-      sidePoint,
-      "La tarjeta lateral ofrece una superficie visible para tocar",
-    ).not.toBeNull();
-    await page.mouse.click(sidePoint!.x, sidePoint!.y);
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 4",
-    );
-    await stage.evaluate((el) => {
-      const event = new Event("touchstart", { bubbles: true });
-      Object.defineProperty(event, "touches", {
-        value: [{ clientX: 230, clientY: 200 }],
-      });
-      el.dispatchEvent(event);
-    });
-    await stage.evaluate((el) => {
-      const event = new Event("touchend", { bubbles: true });
-      Object.defineProperty(event, "changedTouches", {
-        value: [{ clientX: 100, clientY: 210 }],
-      });
-      el.dispatchEvent(event);
-    });
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 3",
-    );
-    await stage.evaluate((el) => {
-      const event = new Event("touchstart", { bubbles: true });
-      Object.defineProperty(event, "touches", {
-        value: [{ clientX: 230, clientY: 200 }],
-      });
-      el.dispatchEvent(event);
-    });
-    await stage.evaluate((el) => {
-      const event = new Event("touchend", { bubbles: true });
-      Object.defineProperty(event, "changedTouches", {
-        value: [{ clientX: 130, clientY: 400 }],
-      });
-      el.dispatchEvent(event);
-    });
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 3",
-    );
-    await expect
-      .poll(() =>
-        stage.locator(".is-active").evaluate((el) => el.getAnimations().length),
-      )
-      .toBe(0);
+    expect(sidePoint, 'La tarjeta lateral ofrece una superficie visible para tocar').not.toBeNull();
+    await page.mouse.click(sidePoint!.x,sidePoint!.y);
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 4');
+    await stage.evaluate(el => { const event = new Event('touchstart', {bubbles:true}); Object.defineProperty(event, 'touches', {value:[{clientX:230,clientY:200}]}); el.dispatchEvent(event); });
+    await stage.evaluate(el => { const event = new Event('touchend', {bubbles:true}); Object.defineProperty(event, 'changedTouches', {value:[{clientX:100,clientY:210}]}); el.dispatchEvent(event); });
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 3');
+    await stage.evaluate(el => { const event = new Event('touchstart', {bubbles:true}); Object.defineProperty(event, 'touches', {value:[{clientX:230,clientY:200}]}); el.dispatchEvent(event); });
+    await stage.evaluate(el => { const event = new Event('touchend', {bubbles:true}); Object.defineProperty(event, 'changedTouches', {value:[{clientX:130,clientY:400}]}); el.dispatchEvent(event); });
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 3');
+    await expect.poll(()=>stage.locator('.is-active').evaluate(el=>el.getAnimations().length)).toBe(0);
     await assertFits(page);
-    await stage.screenshot({
-      path: "test-results/" + info.project.name + "-coverflow.png",
-    });
-    await stage
-      .getByRole("button", { name: "Ver Demo carrusel 3", exact: true })
-      .click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    expect(
-      await stage
-        .locator(".is-active")
-        .evaluate((el) => getComputedStyle(el).transitionDuration),
-    ).toBe("0s");
-    await expect(
-      page.getByRole("button", { name: "Presentación", exact: true }),
-    ).toBeDisabled();
-    await stage.getByRole("button", { name: "Recuerdo siguiente" }).click();
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 2",
-    );
-    await page.emulateMedia({ reducedMotion: "no-preference" });
-    if (info.project.name === "mobile") {
-      await page.setViewportSize({ width: 360, height: 780 });
-      await assertFits(page);
+    await stage.screenshot({path:'test-results/' + info.project.name + '-coverflow.png'});
+    await stage.getByRole('button',{name:'Ver Demo carrusel 3',exact:true}).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    expect(await stage.locator('.is-active').evaluate(el=>getComputedStyle(el).transitionDuration)).toBe('0s');
+    await expect(page.getByRole('button',{name:'Presentación',exact:true})).toBeDisabled();
+    await stage.getByRole('button',{name:'Recuerdo siguiente'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 2');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    if(info.project.name==='mobile') {
+      await page.setViewportSize({width:360,height:780}); await assertFits(page);
     }
-    for (const id of ids.slice(2))
-      await page.request.delete("/api/media/" + id, { headers });
+    for(const id of ids.slice(2)) await page.request.delete('/api/media/'+id,{headers});
     const reloadAlbum = async () => {
       await page.reload();
-      await page.getByRole("button", { name: "Mostrar filtros" }).click();
-      await page
-        .getByRole("combobox", { name: "Álbum", exact: true })
-        .selectOption("Coverflow " + info.project.name);
+      await page.getByRole('button',{name:'Mostrar filtros'}).click();
+      await page.getByRole('combobox',{name:'Álbum',exact:true}).selectOption('Coverflow ' + info.project.name);
     };
     await reloadAlbum();
-    await expect(stage.locator(".coverflow-card")).toHaveCount(2);
-    await stage.getByRole("button", { name: "Recuerdo siguiente" }).click();
-    await expect(stage.locator(".is-active img")).toHaveAttribute(
-      "alt",
-      "Demo carrusel 1",
-    );
-    await page.request.delete("/api/media/" + ids[0], { headers });
+    await expect(stage.locator('.coverflow-card')).toHaveCount(2);
+    await stage.getByRole('button',{name:'Recuerdo siguiente'}).click();
+    await expect(stage.locator('.is-active img')).toHaveAttribute('alt','Demo carrusel 1');
+    await page.request.delete('/api/media/'+ids[0],{headers});
     await reloadAlbum();
-    await expect(stage.locator(".coverflow-card")).toHaveCount(1);
-    await expect(
-      stage.getByRole("button", { name: "Recuerdo siguiente" }),
-    ).toHaveCount(0);
+    await expect(stage.locator('.coverflow-card')).toHaveCount(1);
+    await expect(stage.getByRole('button',{name:'Recuerdo siguiente'})).toHaveCount(0);
     await assertFits(page);
   } finally {
-    for (const id of ids)
-      await page.request.delete("/api/media/" + id, { headers });
+    for(const id of ids) await page.request.delete('/api/media/'+id,{headers});
   }
 });
 for (const mode of ["normal", "blocked", "native-volume-ignored"] as const) {
   test("background music: " + mode, async ({ page }, info) => {
     const samples = 44100 * 40;
     const wav = Buffer.alloc(44 + samples * 2);
-    wav.write("RIFF");
-    wav.writeUInt32LE(36 + samples * 2, 4);
-    wav.write("WAVE", 8);
-    wav.write("fmt ", 12);
-    wav.writeUInt32LE(16, 16);
-    wav.writeUInt16LE(1, 20);
-    wav.writeUInt16LE(1, 22);
-    wav.writeUInt32LE(44100, 24);
-    wav.writeUInt32LE(88200, 28);
-    wav.writeUInt16LE(2, 32);
-    wav.writeUInt16LE(16, 34);
-    wav.write("data", 36);
+    wav.write("RIFF"); wav.writeUInt32LE(36 + samples * 2, 4);
+    wav.write("WAVE", 8); wav.write("fmt ", 12);
+    wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20);
+    wav.writeUInt16LE(1, 22); wav.writeUInt32LE(44100, 24);
+    wav.writeUInt32LE(88200, 28); wav.writeUInt16LE(2, 32);
+    wav.writeUInt16LE(16, 34); wav.write("data", 36);
     wav.writeUInt32LE(samples * 2, 40);
-    for (let i = 0; i < samples; i++)
-      wav.writeInt16LE(
-        Math.round(Math.sin((i / 44100) * Math.PI * 440) * 1000),
-        44 + i * 2,
-      );
+    for (let i = 0; i < samples; i++) wav.writeInt16LE(Math.round(Math.sin(i / 44100 * Math.PI * 440) * 1000), 44 + i * 2);
     await page.addInitScript((mode) => {
       Math.random = () => 0.75;
       if (mode === "blocked") {
         const play = HTMLMediaElement.prototype.play;
         let first = true;
         HTMLMediaElement.prototype.play = function () {
-          if (first) {
-            first = false;
-            return Promise.reject(
-              new DOMException("Autoplay blocked", "NotAllowedError"),
-            );
-          }
+          if (first) { first = false; return Promise.reject(new DOMException("Autoplay blocked", "NotAllowedError")); }
           return play.call(this);
         };
       }
       if (mode === "native-volume-ignored") {
-        Object.defineProperty(HTMLMediaElement.prototype, "volume", {
-          configurable: true,
-          get: () => 1,
-          set: () => {},
-        });
+        Object.defineProperty(HTMLMediaElement.prototype, "volume", { configurable: true, get: () => 1, set: () => {} });
         const createGain = AudioContext.prototype.createGain;
         AudioContext.prototype.createGain = function () {
           const gain = createGain.call(this);
@@ -963,100 +684,42 @@ for (const mode of ["normal", "blocked", "native-volume-ignored"] as const) {
         };
       }
     }, mode);
-    await page.route("**/api/library", async (route) => {
+    await page.route("**/api/library", async route => {
       const original = await (await route.fetch()).json();
-      original.media = [0, 1].map((i) => ({
-        id: "demo-song-" + i,
-        kind: "audio",
-        title: "Canción demo " + i,
-        artist: "Demo",
-        date: "2026-10-08",
-        album: "",
-        tags: [],
-        favorite: false,
-        mime: "audio/wav",
-        size: wav.length,
-        createdAt: "2026-10-08T12:00:00Z",
-      }));
+      original.media = [0, 1].map(i => ({ id: "demo-song-" + i, kind: "audio", title: "Canción demo " + i, artist: "Demo", date: "2026-10-08", album: "", tags: [], favorite: false, mime: "audio/wav", size: wav.length, createdAt: "2026-10-08T12:00:00Z" }));
       await route.fulfill({ json: original });
     });
-    await page.route("**/api/files/demo-song-*", (route) =>
-      route.fulfill({ contentType: "audio/wav", body: wav }),
-    );
+    await page.route("**/api/files/demo-song-*", route => route.fulfill({ contentType: "audio/wav", body: wav }));
     await login(page);
-    const player = page.getByRole("complementary", {
-      name: "Reproductor de música",
-    });
+    const player = page.getByRole("complementary", { name: "Reproductor de música" });
     await expect(player).toContainText("Canción demo 1");
-    await expect(
-      page.getByRole("slider", { name: "Volumen", exact: true }),
-    ).toHaveValue("0.15");
+    await expect(page.getByRole("slider", { name: "Volumen", exact: true })).toHaveValue("0.15");
     if (mode === "blocked") {
-      await expect(
-        page.getByRole("button", { name: "Activar música de fondo" }),
-      ).toBeVisible();
-      expect(
-        await page.locator("audio").evaluate((a: HTMLAudioElement) => a.paused),
-      ).toBe(true);
-      await page
-        .getByRole("button", { name: "Activar música de fondo" })
-        .click();
+      await expect(page.getByRole("button", { name: "Activar música de fondo" })).toBeVisible();
+      expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.paused)).toBe(true);
+      await page.getByRole("button", { name: "Activar música de fondo" }).click();
     }
-    await expect(
-      page.getByRole("button", { name: "Pausar música" }),
-    ).toBeVisible();
-    await expect
-      .poll(() =>
-        page.locator("audio").evaluate((a: HTMLAudioElement) => a.currentTime),
-      )
-      .toBeGreaterThan(0);
+    await expect(page.getByRole("button", { name: "Pausar música" })).toBeVisible();
+    await expect.poll(() => page.locator("audio").evaluate((a: HTMLAudioElement) => a.currentTime)).toBeGreaterThan(0);
     if (mode === "native-volume-ignored") {
-      expect(
-        await page.evaluate(
-          () =>
-            (window as unknown as { testGain: GainNode }).testGain.gain.value,
-        ),
-      ).toBeCloseTo(0.15);
-    } else
-      expect(
-        await page.locator("audio").evaluate((a: HTMLAudioElement) => a.volume),
-      ).toBe(0.15);
+      expect(await page.evaluate(() => (window as unknown as { testGain: GainNode }).testGain.gain.value)).toBeCloseTo(0.15);
+    } else expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.volume)).toBe(0.15);
     await page.getByRole("button", { name: "Música", exact: true }).click();
     await page.getByRole("slider", { name: "Volumen", exact: true }).focus();
     await page.keyboard.press("End");
-    await expect(
-      page.getByRole("slider", { name: "Volumen", exact: true }),
-    ).toHaveValue("1");
+    await expect(page.getByRole("slider", { name: "Volumen", exact: true })).toHaveValue("1");
     if (mode === "native-volume-ignored") {
-      expect(
-        await page.evaluate(
-          () =>
-            (window as unknown as { testGain: GainNode }).testGain.gain.value,
-        ),
-      ).toBe(1);
-    } else
-      expect(
-        await page.locator("audio").evaluate((a: HTMLAudioElement) => a.volume),
-      ).toBe(1);
+      expect(await page.evaluate(() => (window as unknown as { testGain: GainNode }).testGain.gain.value)).toBe(1);
+    } else expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.volume)).toBe(1);
     await page.getByRole("button", { name: "Canción siguiente" }).click();
     await expect(player).toContainText("Canción demo 0");
     await page.getByRole("button", { name: "Pausar música" }).click();
     await page.getByRole("button", { name: "Palabras", exact: true }).click();
-    await expect(
-      page.getByRole("slider", { name: "Volumen", exact: true }),
-    ).toHaveValue("1");
-    expect(
-      await page.locator("audio").evaluate((a: HTMLAudioElement) => a.paused),
-    ).toBe(true);
+    await expect(page.getByRole("slider", { name: "Volumen", exact: true })).toHaveValue("1");
+    expect(await page.locator("audio").evaluate((a: HTMLAudioElement) => a.paused)).toBe(true);
     await assertFits(page);
-    if (info.project.name === "mobile") {
-      await page.setViewportSize({ width: 360, height: 780 });
-      await assertFits(page);
-    }
-    await player.screenshot({
-      path:
-        "test-results/" + info.project.name + "-background-" + mode + ".png",
-    });
+    if (info.project.name === "mobile") { await page.setViewportSize({ width: 360, height: 780 }); await assertFits(page); }
+    await player.screenshot({ path: "test-results/" + info.project.name + "-background-" + mode + ".png" });
     await page.getByRole("button", { name: "Cerrar reproductor" }).click();
     await page.getByRole("button", { name: "Música", exact: true }).click();
     await expect(player).toHaveCount(0);
@@ -1065,128 +728,52 @@ for (const mode of ["normal", "blocked", "native-volume-ignored"] as const) {
   });
 }
 
-test("responsive albums stay contained and modal fits with many memories", async ({
-  page,
-}, info) => {
-  const media = Array.from({ length: 145 }, (_, i) => ({
-    id: "demo-responsive-" + i,
-    kind: "photo",
-    title:
-      "Vista demo " + i + " · " + "Un recuerdo muy especial juntos ".repeat(8),
-    date: "2026-09-01",
-    album:
-      "Álbum " + String(i % 16).padStart(2, "0") + " · " + "Juntos".repeat(6),
-    tags: ["Demo"],
-    favorite: false,
-    artist: "",
-    mime: "image/png",
-    size: png.length,
-    createdAt: "2026-09-01T12:00:00Z",
-  }));
-  await page.route("**/api/library", async (route) => {
+test("responsive albums stay contained and modal fits with many memories", async ({ page }, info) => {
+  const media = Array.from({ length: 145 }, (_, i) => ({ id: "demo-responsive-" + i, kind: "photo", title: "Vista demo " + i + " · " + "Un recuerdo muy especial juntos ".repeat(8), date: "2026-09-01", album: "Álbum " + String(i % 16).padStart(2, "0") + " · " + "Juntos".repeat(6), tags: ["Demo"], favorite: false, artist: "", mime: "image/png", size: png.length, createdAt: "2026-09-01T12:00:00Z" }));
+  await page.route("**/api/library", async route => {
     const original = await (await route.fetch()).json();
-    await route.fulfill({
-      json: {
-        ...original,
-        media,
-        notes: [],
-        settings: {
-          names: "Ailu y Tomy",
-          title: "Nuestro rincón",
-          since: "2026-08-29",
-          coverId: media[0].id,
-          featuredId: media[1].id,
-        },
-      },
-    });
+    await route.fulfill({ json: { ...original, media, notes: [], settings: { names: "Ailu y Tomy", title: "Nuestro rincón", since: "2026-08-29", coverId: media[0].id, featuredId: media[1].id } } });
   });
-  await page.route("**/api/files/demo-responsive-*", (route) =>
-    route.fulfill({ contentType: "image/png", body: png }),
-  );
+  await page.route("**/api/files/demo-responsive-*", route => route.fulfill({ contentType: "image/png", body: png }));
   await login(page);
-  for (const width of info.project.name === "mobile"
-    ? [360, 390]
-    : [740, 1440]) {
+  for (const width of info.project.name === "mobile" ? [360, 390] : [740, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     try {
-      await expect
-        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
-        .toBeLessThanOrEqual(width);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     } catch (error) {
-      console.log(
-        "Responsive overflow",
-        await page.evaluate(
-          (limit) => ({
-            viewport: innerWidth,
-            documentWidth: document.documentElement.scrollWidth,
-            elements: Array.from(document.querySelectorAll("body *"))
-              .filter((el) => !el.closest(".album-cards"))
-              .map((el) => ({
-                tag: el.tagName,
-                classes: el.className,
-                right: el.getBoundingClientRect().right,
-                width: el.getBoundingClientRect().width,
-                clientWidth: el.clientWidth,
-                scrollWidth: el.scrollWidth,
-              }))
-              .filter(
-                (el) =>
-                  el.right > limit + 0.5 || el.scrollWidth > el.clientWidth + 1,
-              )
-              .slice(0, 20),
-          }),
-          width,
-        ),
-      );
+      console.log("Responsive overflow", await page.evaluate(limit => ({
+        viewport: innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        elements: Array.from(document.querySelectorAll("body *"))
+          .filter(el => !el.closest(".album-cards"))
+          .map(el => ({ tag: el.tagName, classes: el.className, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width, clientWidth: el.clientWidth, scrollWidth: el.scrollWidth }))
+          .filter(el => el.right > limit + 0.5 || el.scrollWidth > el.clientWidth + 1).slice(0, 20),
+      }), width));
       throw error;
     }
     await assertFits(page);
-    const albums = page.getByRole("region", {
-      name: "Nuestros álbumes",
-      exact: true,
-    });
+    const albums = page.getByRole("region", { name: "Nuestros álbumes", exact: true });
     const strip = albums.locator(".album-cards");
     const next = albums.getByRole("button", { name: "Álbumes siguientes" });
     const previous = albums.getByRole("button", { name: "Álbumes anteriores" });
-    await strip.evaluate((el) => {
-      el.scrollLeft = 0;
-    });
+    await strip.evaluate(el => { el.scrollLeft = 0; });
     await expect(previous).toBeDisabled();
     await expect(next).toBeEnabled();
-    expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
-      true,
-    );
+    expect(await strip.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
     await next.click();
-    await expect
-      .poll(() => strip.evaluate((el) => el.scrollLeft))
-      .toBeGreaterThan(50);
+    await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeGreaterThan(50);
     await expect(previous).toBeEnabled();
     await previous.click();
-    await expect
-      .poll(() => strip.evaluate((el) => el.scrollLeft))
-      .toBeLessThan(2);
+    await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeLessThan(2);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await next.click();
-    await expect
-      .poll(() => strip.evaluate((el) => el.scrollLeft))
-      .toBeGreaterThan(50);
-    await strip.evaluate((el) => {
-      el.scrollLeft = el.scrollWidth;
-    });
+    await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeGreaterThan(50);
+    await strip.evaluate(el => { el.scrollLeft = el.scrollWidth; });
     await expect(next).toBeDisabled();
-    await albums
-      .getByRole("button", {
-        name: "Ver álbum " + media[15].album,
-        exact: true,
-      })
-      .click();
-    await expect(page.locator(".active-memory-filter")).toContainText(
-      media[15].album,
-    );
+    await albums.getByRole("button", { name: "Ver álbum " + media[15].album, exact: true }).click();
+    await expect(page.locator(".active-memory-filter")).toContainText(media[15].album);
     await assertFits(page);
-    await page
-      .getByRole("button", { name: "Ver nuestra foto de portada" })
-      .click();
+    await page.getByRole("button", { name: "Ver nuestra foto de portada" }).click();
     const dialog = page.getByRole("dialog", { name: "Un momento nuestro" });
     await expect(dialog).toBeVisible();
     const bounds = await dialog.boundingBox();
@@ -1194,20 +781,14 @@ test("responsive albums stay contained and modal fits with many memories", async
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(845);
-    await expect(
-      dialog.getByRole("button", { name: "Cerrar", exact: true }),
-    ).toBeInViewport();
+    await expect(dialog.getByRole("button", { name: "Cerrar", exact: true })).toBeInViewport();
     await expect(dialog.locator(".viewer-stage img")).toBeInViewport();
     await assertFits(page);
-    await page.screenshot({
-      path: "test-results/responsive-modal-" + width + ".png",
-    });
+    await page.screenshot({ path: "test-results/responsive-modal-" + width + ".png" });
     await dialog.getByRole("button", { name: "Cerrar", exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await albums.scrollIntoViewIfNeeded();
-    await page.screenshot({
-      path: "test-results/responsive-albums-" + width + ".png",
-    });
+    await page.screenshot({ path: "test-results/responsive-albums-" + width + ".png" });
     await page.emulateMedia({ reducedMotion: "no-preference" });
   }
 });
