@@ -125,6 +125,22 @@ function upload(cookie: string) {
 }
 
 describe("Free hosting persistence", () => {
+  it("persists private places in PostgreSQL across staging replacement without changing memories or objects", async () => {
+    const cookie=await login();
+    await upload(cookie).expect(201);
+    const before=(await pg.query("SELECT * FROM rincon.media ORDER BY id")).rows;
+    const objects=new Map(files);
+    const body={name:"Café demo",address:"Buenos Aires",category:"cafe",note:"Sintético",lat:-34.6,lng:-58.4};
+    const place=(await request(runtime.app).post("/api/places").set(headers).set("Cookie",cookie).send(body).expect(201)).body;
+    await runtime.close();runtime=await start();
+    const library=(await request(runtime.app).get("/api/library").set("Cookie",cookie).expect(200)).body;
+    expect(library.places).toContainEqual(place);
+    await request(runtime.app).patch("/api/places/"+place.id).set(headers).set("Cookie",cookie).send({...body,category:"visit"}).expect(200);
+    await request(runtime.app).delete("/api/places/"+place.id).set(headers).set("Cookie",cookie).expect(204);
+    expect((await pg.query("SELECT * FROM rincon.media ORDER BY id")).rows).toEqual(before);
+    expect(files).toEqual(objects);
+    expect((await pg.query("SELECT key FROM rincon.meta WHERE key LIKE 'place:%'")).rows).toEqual([]);
+  });
   it("stores album titles and covers in PostgreSQL without rewriting remote memories or objects", async () => {
     const cookie = await login();
     const photo = await upload(cookie).field("album", "Viajes").expect(201);

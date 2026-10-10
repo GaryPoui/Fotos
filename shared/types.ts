@@ -30,6 +30,7 @@ export interface Settings {
   title: string;
 }
 export interface Library {
+  places?: Place[];
   albums?: AlbumCustomization[];
   media: Media[];
   notes: Note[];
@@ -40,4 +41,26 @@ export interface AlbumCustomization {
   album: string;
   title: string;
   coverId: string | null;
+}
+export type PlaceCategory =
+  | "cafe"
+  | "restaurant"
+  | "shopping"
+  | "visit"
+  | "important"
+  | "park"
+  | "other";
+export interface PlaceCandidate {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  approximate?: boolean;
+}
+export interface Place extends Omit<PlaceCandidate, "approximate"> {
+  id: string;
+  category: PlaceCategory;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
 }

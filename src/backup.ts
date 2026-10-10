@@ -115,6 +115,7 @@ export async function backupZip(
         totalParts: total,
         settings: library.settings,
         albums: library.albums || [],
+        places: library.places || [],
         notes: library.notes,
         media: library.media,
         files: manifest,

@@ -16,6 +16,7 @@ const media = {
   createdAt: "",
 } as Media;
 const library: Library = {
+  places: [{id:"33333333-3333-4333-8333-333333333333",name:"Lugar demo",address:"Buenos Aires",category:"important",note:"Una primera salida",lat:-34.6,lng:-58.4,createdAt:"2026-10-10T12:00:00Z",updatedAt:"2026-10-10T12:00:00Z"}],
   albums: [{ album: "Viaje", title: "Nuestros viajes", coverId: media.id }],
   media: [media],
   notes: [
@@ -56,6 +57,7 @@ it("exports readable private originals, thumbnails, letters and verifiable hashe
   ]);
   expect(manifest.settings).toEqual(library.settings);
   expect(manifest.albums).toEqual(library.albums);
+  expect(manifest.places).toEqual(library.places);
   expect(manifest.files).toHaveLength(3);
   for (const item of manifest.files) {
     const hash = Buffer.from(

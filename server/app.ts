@@ -25,8 +25,9 @@ import { z, ZodError } from "zod";
 import { openDatabase, type Database } from "./database.js";
 import type { ObjectStorage } from "./cloud-storage.js";
 import { inspectFile, thumbnail } from "./files.js";
-import type { Media, Note, Settings, AlbumCustomization } from "../shared/types.js";
+import type { Media, Note, Settings, AlbumCustomization, Place, PlaceCandidate } from "../shared/types.js";
 import { albumKey, albumTitle, albumNameKey } from "../shared/albums.js";
+import { placeInput, savedPlace, createPlaceResolver, PlaceLookupError } from "./places.js";
 
 const hash = (value: string | Buffer) =>
   createHash("sha256").update(value).digest("hex");
@@ -112,6 +113,7 @@ export interface AppOptions {
   databaseCa?: string;
   database?: Database;
   objectStorage?: ObjectStorage;
+  placeResolver?: (query:string)=>Promise<PlaceCandidate[]>;
 }
 export async function createApp(options: AppOptions) {
   if (
@@ -190,10 +192,11 @@ export async function createApp(options: AppOptions) {
       contentSecurityPolicy: {
         directives: {
           workerSrc: ["'self'", "blob:"],
-          "img-src": ["'self'", "blob:", "data:"],
+          "img-src": ["'self'", "blob:", "data:", "https://tile.openstreetmap.org", ...(process.env.MAP_TILE_ORIGIN ? [new URL(process.env.MAP_TILE_ORIGIN).origin] : [])],
           "media-src": ["'self'", "blob:"],
         },
       },
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     }),
   );
   app.use("/api", async (_req, res, next) => {
@@ -351,12 +354,46 @@ export async function createApp(options: AppOptions) {
       } catch { return []; }
     });
   };
+  const getPlaces = async ():Promise<Place[]> => {
+    const rows=await db.prepare("SELECT value FROM meta WHERE key LIKE 'place:%'").all() as {value:string}[];
+    return rows.flatMap(row=>{try{const parsed=savedPlace.safeParse(JSON.parse(row.value));return parsed.success?[parsed.data]:[];}catch{return [];}});
+  };
+  const resolvePlace=options.placeResolver||createPlaceResolver({origin:options.origin});
+  app.post("/api/places/resolve",async(req,res)=>{
+    const {query}=z.object({query:z.string().trim().min(3).max(2048)}).strict().parse(req.body);
+    try{res.json({results:await resolvePlace(query)});}catch(error){
+      if(error instanceof PlaceLookupError)throw new ApiError(error.status,error.message);
+      throw new ApiError(502,"No pudimos buscar ese lugar. Volvé a intentar.");
+    }
+  });
+  app.post("/api/places",async(req,res)=>{
+    const input=placeInput.parse(req.body),now=new Date().toISOString();
+    const place:Place={...input,id:randomUUID(),createdAt:now,updatedAt:now};
+    await db.prepare("INSERT INTO meta (key,value) VALUES (?,?)").run("place:"+place.id,JSON.stringify(place));
+    res.status(201).json(place);
+  });
+  app.patch("/api/places/:id",async(req,res)=>{
+    const id=z.string().uuid().parse(req.params.id),input=placeInput.parse(req.body);
+    const row=await db.prepare("SELECT value FROM meta WHERE key=?").get("place:"+id) as {value:string}|undefined;
+    if(!row)throw new ApiError(404,"No encontramos este lugar. Recargá el mapa.");
+    const previous=savedPlace.parse(JSON.parse(row.value));
+    const place:Place={...input,id,createdAt:previous.createdAt,updatedAt:new Date().toISOString()};
+    await db.prepare("UPDATE meta SET value=? WHERE key=?").run(JSON.stringify(place),"place:"+id);
+    res.json(place);
+  });
+  app.delete("/api/places/:id",async(req,res)=>{
+    const id=z.string().uuid().parse(req.params.id);
+    if(!await db.prepare("SELECT value FROM meta WHERE key=?").get("place:"+id))throw new ApiError(404,"No encontramos este lugar.");
+    await db.prepare("DELETE FROM meta WHERE key=?").run("place:"+id);
+    res.status(204).end();
+  });
   app.get("/api/library", async (_req, res) =>
     res.json({
       media: await mediaRows(),
       notes: await noteRows(),
       settings: await getSettings(),
       albums: await getAlbums(),
+      places: await getPlaces(),
       storage: { used: await used(), limit: maxStorage, maxFile },
     }),
   );

@@ -1,5 +1,5 @@
 import { cloudEnabled, storageReady } from "./cloud/config";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Heart,
   Images,
@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Cloud,
   LoaderCircle,
+  MapPin,
 } from "lucide-react";
 import type { Library, Media, Note, Settings } from "../shared/types";
 import { api, bytes, today } from "./lib";
@@ -27,7 +28,8 @@ import { NoteDialog } from "./components/NoteDialog";
 import { Dialog } from "./components/Dialog";
 import { clearUploads, discardPendingUploads } from "./upload-queue";
 import { BackupDialog } from "./components/BackupDialog";
-type Page = "memories" | "music" | "words";
+const PlacesMap = lazy(() => import("./components/PlacesMap"));
+type Page = "memories" | "music" | "words" | "map";
 export default function App() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [library, setLibrary] = useState<Library | null>(null);
@@ -227,6 +229,11 @@ export default function App() {
               revision={uploadType || "closed"}
               onResume={setUploadType}
             />
+            {page === "map" ? (
+              <Suspense fallback={<div className="loading-screen"><LoaderCircle className="spin"/><p>Abriendo nuestro mapa…</p></div>}>
+                <PlacesMap places={library.places || []} onChanged={changed}/>
+              </Suspense>
+            ) : (<>
             {page === "memories" ? (
               <MemoryHome
                 items={library.media.filter((m) => m.kind !== "audio")}
@@ -345,6 +352,7 @@ export default function App() {
                 onError={setError}
               />
             )}
+            </>)}
             <footer className="page-footer">
               <Heart size={12} />
               <span>
@@ -368,8 +376,9 @@ export default function App() {
             { id: "memories", label: "Recuerdos", icon: Images },
             { id: "music", label: "Música", icon: Music2 },
             { id: "words", label: "Palabras", icon: Mail },
+            { id: "map", label: "Mapa", icon: MapPin },
           ] as const
-        ).map(({ id, label, icon: Icon }) => (
+        ).filter(({id}) => id !== "map" || !cloudEnabled).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             aria-current={page === id ? "page" : undefined}
