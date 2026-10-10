@@ -1,7 +1,7 @@
 # Feature Specification: Nombres y portadas de álbumes
 **Feature Branch**: `main` (publicación autorizada)
 **Created**: 2026-10-09
-**Status**: Ready for implementation
+**Status**: Implemented, published and verified
 **Input**: Poder editar los títulos y fotos de portada de los álbumes.
 
 ## User Scenarios & Testing

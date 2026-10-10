@@ -12,8 +12,8 @@
 - [x] T007 [US2] Crear src/components/AlbumDialog.tsx con nombre, radio de fotos/automática, preview, error y cancelación; controles44px y src/styles.css responsive.
 - [x] T008 [US2] Elegir portada en src/components/Revisit.tsx, fallback si fuera del álbum, y exportar albums en src/backup.ts.
 ## Phase 5: Delivery
-- [ ] T009 Verificar edición, recarga, nueva subida al mismo grupo, fallback y ZIP en tests/{albums,e2e,backup-browser}.test/spec.ts; build y suites.
-- [ ] T010 Commit/push, CI, publicar Render y verificar UI sintética y contenido histórico contra respaldo; evidencia en specs/011-album-customization/verification.md.
+- [x] T009 Verificar edición, recarga, nueva subida al mismo grupo, fallback y ZIP en tests/{albums,e2e,backup-browser}.test/spec.ts; build y suites.
+- [x] T010 Commit/push, CI, publicar Render y verificar UI sintética y contenido histórico contra respaldo; evidencia en specs/011-album-customization/verification.md.
 ## Dependencies
 T001 → T002/T003 → T004 → T005 → T006/T007 → T008 → T009 → T010. US1 y US2 comparten editor; deben publicarse juntas.
 ## Parallel opportunities
