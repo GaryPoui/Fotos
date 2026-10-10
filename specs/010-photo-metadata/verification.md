@@ -6,7 +6,10 @@
 - npm run build: PASS. npm test: 33 passed, 5 Firebase emulator tests skipped. New integration regression confirms startup does not change an automatic upload, manual date edits work, original bytes are preserved and optional capture records remain intact.
 - No database migration, content deletion, bulk date replacement or credential changes.
 - Complete local mobile/desktop Playwright suite: 30/30 PASS, including manual date upload, same-day memories, private uploads, pause/resume, carousel, background music and responsive albums/modals.
-- Publication and post-deploy preservation checks pending.
+- Code commit 0e64e9e pushed to main; [CI 38013326821](https://github.com/GaryPoui/Fotos/actions/runs/38013326821): SUCCESS, including Linux browser checks and Docker persistence after container replacement.
+- Render deploy dep-db4pbdqd0e5s73d0tu70: Deploy succeeded / Live, source 0e64e9e, 2026-10-09 22:32 ART. Public frontend index-C1QxWU91.js matches the verified build.
+- Public synthetic browser checks at 360, 390 and 1440 px: manual upload date editable; previous automatic photo opens with its saved date and allows manual date editing; no overflow or page errors. No personal records created, edited or deleted. Screenshot test-results/render-manual-dates-390.png.
+- Post-deploy PostgreSQL comparison: schema and every pre-deploy media/notes/meta row unchanged, including capture records. All 151 original files match their pre-deploy sizes and SHA-256; all titles, dates, albums, tags, favorites, settings and 2 notes match. Private verification reports saved beside the fresh backup, excluded from Git.
 
 The following evidence describes the previous automatic-date release and is retained for history.
 

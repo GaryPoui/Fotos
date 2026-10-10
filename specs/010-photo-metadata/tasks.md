@@ -23,7 +23,7 @@
 - [x] T014 Snapshot current private library and database before restoring code.
 - [x] T015 Restore previous manual upload/edit dates and gallery behavior; retain all stored records and capture metadata.
 - [x] T016 Verify manual date persistence and editability after rollback, build and mobile/desktop checks.
-- [ ] T017 Commit/push, verify CI, deploy Render and compare originals and raw records; record evidence.
+- [x] T017 Commit/push, verify CI, deploy Render and compare originals and raw records; record evidence.
 
 ## Dependencies
 T001 → T002 → foundation → US1 → US2 → US3 → delivery. Pruebas críticas antes de implementación. US3 verifica preservación independientemente de filtros.
