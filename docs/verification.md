@@ -164,3 +164,6 @@ Evidencia local en test-results/ (ignorada por Git).
 
 - Se detectó además que el nombre de álbum en el pie de las tarjetas del mosaico no permitía cortar palabras largas. Se aplica overflow-wrap:anywhere al texto de metadatos; diagnóstico de CI distingue overflow real de tarjetas fuera de vista dentro del carrusel. Build y recorridos locales con 145 recuerdos PASS.
 
+- Verificación final: 697a129, GitHub Actions 38009876354 SUCCESS (integración, 30 recorridos navegador Linux, Docker y persistencia). El corte de nombres largos en el pie de tarjetas resuelve el desbordamiento restante de la prueba móvil.
+- Render dep-db4ojcqjnfac73fvgl4g Live con 697a129. Revisión pública final 360/390/1440 px, 145 recuerdos y 16 álbumes demo: ancho configurado respetado, flechas, portada y modal PASS. Capturas render-responsive-albums y render-responsive-modal actualizadas. Sólo fixtures locales; no se cambiaron contenidos privados.
+
