@@ -738,6 +738,7 @@ test("responsive albums stay contained and modal fits with many memories", async
   await login(page);
   for (const width of info.project.name === "mobile" ? [360, 390] : [740, 1440]) {
     await page.setViewportSize({ width, height: 844 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await assertFits(page);
     const albums = page.getByRole("region", { name: "Nuestros álbumes", exact: true });
     const strip = albums.locator(".album-cards");

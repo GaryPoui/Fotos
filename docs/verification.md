@@ -160,3 +160,5 @@ Evidencia local en test-results/ (ignorada por Git).
 
 - CI Linux detectó ampliación del viewport móvil a 367 px al abrir un diálogo largo en pantalla de 360 px, pese a las pruebas locales aprobadas. Se añadió anclaje explícito del diálogo, contención de tamaño horizontal y scroll únicamente vertical; se vuelve a verificar sin relajar los límites de la prueba.
 
+- Análisis de la traza Linux: el viewport ya se ampliaba antes del modal y volvía a 360 px al filtrar, por lo que la primera hipótesis del diálogo no resolvía la causa. Se corrigió además el tamaño mínimo de la cabecera con contador y botón de subida: flex-wrap, título reducible y contador estable. La prueba ahora exige ancho del documento <= ancho configurado, para no aceptar el autoajuste del viewport móvil como resultado válido.
+

@@ -403,16 +403,25 @@ main {
 }
 .section-heading {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
   margin-bottom: 22px;
+}
+.section-heading > div {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.section-heading > .add-button {
+  flex-shrink: 0;
 }
 .section-heading .eyebrow {
   font-size: 8px;
   letter-spacing: 1.3px;
 }
 .section-heading h2 {
+  overflow-wrap: anywhere;
   font-size: 25px;
   letter-spacing: -0.6px;
   display: flex;
@@ -421,6 +430,7 @@ main {
   margin-top: 7px;
 }
 .count {
+  flex-shrink: 0;
   font:
     11px ui-sans-serif,
     system-ui,
