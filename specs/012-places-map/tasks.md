@@ -17,7 +17,7 @@
 - [x] T011 [US3] Añadir Mi ubicación client-only, permiso sólo por botón, accuracy/centering, rechazo/error recuperable y cleanup en src/components/{PlacesMap,PlaceCanvas}.tsx.
 ## Phase 6: Delivery
 - [x] T012 Verificar PostgreSQL adapter, reinicio/preservación en tests/cloud.test.ts, navegador a360/390/1440 con lookup/tiles/geolocalización fixtures y retries en tests/places.e2e.spec.ts, build y suites completas.360/1440 locales;390 adicional en QA publicadoT013.
-- [ ] T013 Commit/push, CI, publicar Render, proveedor real con consulta pública, QA público sintético sin guardar lugares reales, comparación históricos y evidencia en specs/012-places-map/verification.md.
+- [x] T013 Commit/push, CI, publicar Render, proveedor real con consulta pública, QA público sintético sin guardar lugares reales, comparación históricos y evidencia en specs/012-places-map/verification.md.
 ## Dependencies
 T001→T002→T003/T004/T005→T006→T007→T008/T009→T010/T011→T012→T013. US2 requiere lugares de US1; US3 mapa de US2.
 ## Parallel opportunities

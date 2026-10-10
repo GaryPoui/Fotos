@@ -10,4 +10,9 @@ Place rows use separate place:UUID JSON keys in existing private meta. No migrat
 - Synthetic local mobile screenshot inspected; maps controls44px and no horizontal overflow. Editor flow refined so map preview precedes data/save on mobile.
 - Actual Photon public landmark lookup 'Obelisco Buenos Aires':5 valid results; no personal address/location used.
 ## Publication
-Pending CI, Render and public synthetic UI verification plus historical DB comparison; T013 remains open until verified.
+- Code2bf00ef pushed to main; [CI38064200655](https://github.com/GaryPoui/Fotos/actions/runs/38064200655) SUCCESS:41 tests,36 browser cases, build and Docker persistence.
+- Render dep-db55nud9fdbs73bn6hvg Deploy succeeded / Live, source2bf00ef,2026-10-10 12:38 ART. Frontend index-CBQV1jpx.js matches local build.
+- Public360/390/1440px synthetic checks PASS with actual OSM tiles, category filter/list/marker agreement, keyboard selection, editing and reload, simulated location; no page errors. Browser saves intercepted, no personal place written or edited. Real authenticated API verified library.places, Photon public landmark query, Maps coordinate URL, and rejection400 of invalid latitude without a write.
+- Screenshot test-results/render-map-390.png inspected; real map with three clearly labeled example places, distinct icons and mobile navigation.
+- Post-deployment raw PostgreSQL comparison PASS: all rincon schema columns and every previous media/notes/meta row identical, including153 media records,3 writings, individual titles, manual dates, albums, cover preferences, songs and settings. No original object operations in feature or production QA. Private report backups/pre-map-2026-10-10/verification.json.
+- All13 tasks complete; no extension hooks configured. Shared Maps opaque/expired links may require entering the address or choosing the pin; no paid Places API or HTML scraping. Current location is the current device, not live tracking of another phone.

@@ -1,7 +1,7 @@
 # Feature Specification: Nuestro mapa
 **Feature Branch**: `main` (avances y publicación autorizados)
 **Created**: 2026-10-10
-**Status**: Implementation planned
+**Status**: Implemented, published and verified
 **Input**: Nuevo apartado Mapa con ubicación actual, lugares guardados por dirección o URL de Maps, categorías e íconos distintos.
 
 ## User Scenarios & Testing
