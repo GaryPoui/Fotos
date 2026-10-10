@@ -15,9 +15,9 @@
 - [x] T010 [US2] Verificar carga automática y filtros combinados en móvil/escritorio en tests/e2e.spec.ts.
 ## Phase 5: User Story 3
 - [x] T011 [US3] Verificar repetición no destructiva del almacenamiento de cronología en SQLite/PostgreSQL con permisos existentes y datos anteriores en tests/metadata.test.ts.
-- [ ] T012 [US3] Comparar datos y hashes de archivos existentes antes/después del deploy en backups/; no hay migración remota.
+- [x] T012 [US3] Comparar datos y hashes de archivos existentes antes/después del deploy en backups/; no hay migración remota.
 ## Phase 6: Delivery
-- [ ] T013 Compilar, ejecutar tests y CI, commit/push y publicar en Render; registrar evidencia en specs/010-photo-metadata/verification.md.
+- [x] T013 Compilar, ejecutar tests y CI, commit/push y publicar en Render; registrar evidencia en specs/010-photo-metadata/verification.md.
 
 ## Dependencies
 T001 → T002 → foundation → US1 → US2 → US3 → delivery. Pruebas críticas antes de implementación. US3 verifica preservación independientemente de filtros.
@@ -25,4 +25,3 @@ T001 → T002 → foundation → US1 → US2 → US3 → delivery. Pruebas crít
 Investigación exifr y revisión de diseño no escriben archivos; pruebas temporales y lectura de fuentes independientes. Ediciones compartidas y migraciones secuenciales.
 ## Strategy
 Incrementos con commit/push: diseño y respaldo; lectura/persistencia validada; filtros/navegador; publicación verificada. Sin esperar agotamiento de cuota.
-

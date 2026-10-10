@@ -8,6 +8,7 @@ Diseño **mobile first**, celeste y rosado, navegación inferior y controles tá
 - Fotos/videos con miniaturas, progreso, pausa, cola recuperable y reanudación por fragmentos en cloud.
 - Fotos HEIC de iPhone convertidas a JPEG en el dispositivo; sin servicios externos.
 - Fechas, álbumes, etiquetas, búsqueda, favoritos y orden cronológico.
+- Fecha y hora originales de las nuevas fotos mediante EXIF, con filtros de año, mes, día, hora y minuto.
 - Mosaico, línea de tiempo, carrusel y presentación con pausa; visor con teclado y gestos.
 - Canciones con reproductor persistente entre secciones, volumen y posición.
 - Frases/cartas con edición, búsqueda, favoritos y lectura con saltos de línea.
@@ -85,6 +86,7 @@ del agente, no comandos ficticios de terminal.
 | [007](specs/007-free-hosting/spec.md) | Render Free y persistencia privada en Supabase Free |
 | [008](specs/008-firebase-hybrid/spec.md) | Firebase Spark y archivos privados en Supabase Free |
 | [009](specs/009-memories-care/spec.md) | Respaldos, subidas recuperables, HEIC, portada y fechas |
+| [010](specs/010-photo-metadata/spec.md) | Fechas originales automáticas y filtros por minuto, conservando el contenido anterior |
 
 Los specs 001–006 incluyen plan, investigación, modelo, contratos, guía y tareas.
 Spec 008 documenta la alternativa cloud implementada con spec, plan y tareas.
@@ -96,6 +98,8 @@ Para retomar un spec existente desde PowerShell, definir su carpeta antes de los
 `$env:SPECIFY_FEATURE_DIRECTORY = 'specs/002-media-library'`.
 
 ## Límites conocidos
+
+Las nuevas fotos usan DateTimeOriginal o CreateDate, conservando el reloj de la cámara; si faltan metadatos válidos, usan el momento de subida en horario argentino. La lectura EXIF admite JPEG, PNG y HEIC; los demás formatos usan esta alternativa. Los recuerdos anteriores mantienen su fecha guardada y no se les inventa una hora. En los filtros se puede elegir fecha del recuerdo o fecha de subida. La cronología nueva se guarda en el almacenamiento persistente existente, sin migración ni cambios de permisos.
 
 Una pareja/instancia; contraseña compartida sin recuperación por email. Formatos:
 HEIC/HEIF se convierte a JPEG en el dispositivo (hasta 20 MB/32 MP); conservar el original.

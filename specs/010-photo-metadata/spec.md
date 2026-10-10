@@ -2,7 +2,7 @@
 
 **Feature Branch**: `main` (publicación autorizada)
 **Created**: 2026-10-09
-**Status**: Ready
+**Status**: Implemented and verified
 **Input**: Leer metadatos en lugar de seleccionar fecha; filtrar por día, mes, año, hora y minuto; subir antes la versión actual y conservar todo el contenido.
 
 ## User Scenarios & Testing
