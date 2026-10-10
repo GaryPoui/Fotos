@@ -162,3 +162,5 @@ Evidencia local en test-results/ (ignorada por Git).
 
 - Análisis de la traza Linux: el viewport ya se ampliaba antes del modal y volvía a 360 px al filtrar, por lo que la primera hipótesis del diálogo no resolvía la causa. Se corrigió además el tamaño mínimo de la cabecera con contador y botón de subida: flex-wrap, título reducible y contador estable. La prueba ahora exige ancho del documento <= ancho configurado, para no aceptar el autoajuste del viewport móvil como resultado válido.
 
+- Se detectó además que el nombre de álbum en el pie de las tarjetas del mosaico no permitía cortar palabras largas. Se aplica overflow-wrap:anywhere al texto de metadatos; diagnóstico de CI distingue overflow real de tarjetas fuera de vista dentro del carrusel. Build y recorridos locales con 145 recuerdos PASS.
+

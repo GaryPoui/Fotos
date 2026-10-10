@@ -618,6 +618,7 @@ main {
   line-height: 1.3;
 }
 .memory-caption p {
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 9px;
   margin-top: 6px;

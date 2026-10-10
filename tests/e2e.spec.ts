@@ -745,8 +745,9 @@ test("responsive albums stay contained and modal fits with many memories", async
         viewport: innerWidth,
         documentWidth: document.documentElement.scrollWidth,
         elements: Array.from(document.querySelectorAll("body *"))
-          .map(el => ({ tag: el.tagName, classes: el.className, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width }))
-          .filter(el => el.right > limit + 0.5).slice(0, 35),
+          .filter(el => !el.closest(".album-cards"))
+          .map(el => ({ tag: el.tagName, classes: el.className, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width, clientWidth: el.clientWidth, scrollWidth: el.scrollWidth }))
+          .filter(el => el.right > limit + 0.5 || el.scrollWidth > el.clientWidth + 1).slice(0, 20),
       }), width));
       throw error;
     }
