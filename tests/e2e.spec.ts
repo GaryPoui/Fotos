@@ -738,7 +738,18 @@ test("responsive albums stay contained and modal fits with many memories", async
   await login(page);
   for (const width of info.project.name === "mobile" ? [360, 390] : [740, 1440]) {
     await page.setViewportSize({ width, height: 844 });
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    try {
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    } catch (error) {
+      console.log("Responsive overflow", await page.evaluate(limit => ({
+        viewport: innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        elements: Array.from(document.querySelectorAll("body *"))
+          .map(el => ({ tag: el.tagName, classes: el.className, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width }))
+          .filter(el => el.right > limit + 0.5).slice(0, 35),
+      }), width));
+      throw error;
+    }
     await assertFits(page);
     const albums = page.getByRole("region", { name: "Nuestros álbumes", exact: true });
     const strip = albums.locator(".album-cards");
