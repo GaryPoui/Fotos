@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   MapPin,
+  Heart,
   Plus,
   LocateFixed,
   Expand,
@@ -15,6 +16,24 @@ import { api } from "../lib";
 import type { Place, PlaceCandidate, PlaceCategory } from "../../shared/types";
 import { mapsLink, placeCategories } from "../../shared/places";
 import { CategoryIcon, PlaceCanvas } from "./PlaceCanvas";
+
+function isMapsLink(value: string) {
+  try {
+    const url = new URL(value.trim());
+    return (
+      url.protocol === "https:" &&
+      (url.hostname === "maps.app.goo.gl" ||
+        (url.hostname === "goo.gl" && url.pathname.startsWith("/maps/")) ||
+        (/^(?:www\.|maps\.)?google\.(?:com|com\.ar|es|cl|com\.br|com\.mx|co\.uk)$/.test(
+          url.hostname,
+        ) &&
+          (url.pathname.startsWith("/maps") ||
+            url.hostname.startsWith("maps.google."))))
+    );
+  } catch {
+    return false;
+  }
+}
 
 export default function PlacesMap({
   places,
@@ -53,6 +72,8 @@ export default function PlacesMap({
   const mounted = useRef(true),
     searchGeneration = useRef(0),
     locationGeneration = useRef(0);
+  const lastAttempt = useRef("");
+  const fieldRevision = useRef({ name: 0, address: 0 });
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -69,6 +90,7 @@ export default function PlacesMap({
     setViewRequest((previous) => ({ kind, nonce: previous.nonce + 1 }));
   const closeEditor = () => {
     searchGeneration.current++;
+    lastAttempt.current = "";
     setSearching(false);
     setEditing(null);
     setCandidate(null);
@@ -88,22 +110,34 @@ export default function PlacesMap({
     setDeleteConfirm(false);
     if (place !== "new") view("candidate");
   };
-  const choose = (point: PlaceCandidate) => {
+  const choose = (
+    point: PlaceCandidate,
+    revision?: typeof fieldRevision.current,
+  ) => {
     setCandidate(point);
-    setAddress(point.address);
-    if (!name || name === candidate?.name) setName(point.name);
+    if (!revision || revision.address === fieldRevision.current.address)
+      setAddress(point.address);
+    if (
+      (!revision || revision.name === fieldRevision.current.name) &&
+      (!name || (editing === "new" && name === candidate?.name))
+    )
+      setName(point.name);
     setResults([]);
     setSearchMessage(
       point.approximate
         ? "El enlace muestra un punto aproximado. Revisalo y corregilo tocando el mapa."
-        : "Punto elegido. Podés ajustarlo tocando el mapa antes de guardar.",
+        : point.addressApproximate
+          ? "Datos del enlace cargados. La dirección es una sugerencia cercana: revisala junto al punto antes de guardar."
+          : point.address
+            ? "Punto elegido. Revisá los datos antes de guardar."
+            : "Ubicamos el punto del enlace, pero no encontramos su dirección. Podés completarla o guardar el punto así.",
     );
     view("candidate");
   };
-  const search = async (event: FormEvent) => {
-    event.preventDefault();
-    if (searching) return;
+  const resolveQuery = async (text: string) => {
+    lastAttempt.current = text;
     const generation = ++searchGeneration.current;
+    const revision = { ...fieldRevision.current };
     setSearching(true);
     setError("");
     setSearchMessage("");
@@ -112,9 +146,13 @@ export default function PlacesMap({
       const response = await api<{ results: PlaceCandidate[] }>(
         "/places/resolve",
         "POST",
-        { query },
+        { query: text },
       );
       if (!mounted.current || generation !== searchGeneration.current) return;
+      if (isMapsLink(text) && response.results.length === 1) {
+        choose(response.results[0], revision);
+        return;
+      }
       setResults(response.results);
       setSearchMessage(
         response.results.length
@@ -129,6 +167,19 @@ export default function PlacesMap({
         setSearching(false);
     }
   };
+  const search = (event: FormEvent) => {
+    event.preventDefault();
+    if (!searching) void resolveQuery(query.trim());
+  };
+  useEffect(() => {
+    const text = query.trim();
+    if (!editing || !isMapsLink(text) || lastAttempt.current === text) return;
+    const timer = window.setTimeout(() => {
+      if (lastAttempt.current !== text) void resolveQuery(text);
+    }, 650);
+    return () => window.clearTimeout(timer);
+    // A link triggers one lookup; field changes do not trigger another request.
+  }, [query, editing]);
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (!candidate || busy) return;
@@ -225,22 +276,85 @@ export default function PlacesMap({
     view("selected");
   };
   const canvas = (
-    <PlaceCanvas
-      places={visible}
-      selectedId={selectedId}
-      candidate={candidate}
-      position={position}
-      viewRequest={viewRequest}
-      picking={!!editing && !busy}
-      onPick={(lat, lng) => {
-        setCandidate({ name: name || "Lugar elegido", address, lat, lng });
-        setSearchMessage(
-          "Punto ajustado en el mapa. Revisá los datos antes de guardar.",
-        );
-      }}
-      onSelect={select}
-      onTileError={() => setTileError(true)}
-    />
+    <div className="places-map-card">
+      <div className="places-map-bar">
+        <div className="places-map-label">
+          <span>
+            <MapPin size={20} />
+          </span>
+          <div>
+            <strong>
+              {editing ? "Elegí nuestro lugar" : "Cada punto, una historia"}
+            </strong>
+            <small>
+              {editing
+                ? "Revisá la ubicación antes de guardar"
+                : visible.length +
+                  (visible.length === 1
+                    ? " lugar en el mapa"
+                    : " lugares en el mapa")}
+            </small>
+          </div>
+        </div>
+        <div className="places-tools">
+          <button
+            className="button secondary"
+            aria-label="Mi ubicación"
+            title="Mi ubicación"
+            onClick={locate}
+            disabled={locating}
+          >
+            {locating ? (
+              <LoaderCircle size={18} className="spin" />
+            ) : (
+              <LocateFixed size={18} />
+            )}
+            <span>Mi ubicación</span>
+          </button>
+          <button
+            className="button secondary"
+            aria-label="Ver todos"
+            title="Ver todos los lugares"
+            onClick={() => {
+              setFilter("all");
+              setSelectedId(null);
+              view("all");
+            }}
+          >
+            <Expand size={18} />
+            <span>Ver todos</span>
+          </button>
+        </div>
+      </div>
+      <PlaceCanvas
+        places={visible}
+        selectedId={selectedId}
+        candidate={candidate}
+        position={position}
+        viewRequest={viewRequest}
+        picking={!!editing && !busy}
+        onPick={(lat, lng) => {
+          searchGeneration.current++;
+          lastAttempt.current = query.trim();
+          setSearching(false);
+          setResults([]);
+          setCandidate({ name: name || "Lugar elegido", address, lat, lng });
+          setSearchMessage(
+            "Punto ajustado en el mapa. Revisá los datos antes de guardar.",
+          );
+        }}
+        onSelect={select}
+        onTileError={() => setTileError(true)}
+      />
+      <div className="places-map-caption">
+        <Heart size={13} aria-hidden="true" />
+        <span>
+          {editing
+            ? "Un lugar más para nuestra historia"
+            : "Los lugares que vivimos, los que nos esperan"}
+        </span>
+      </div>
+    </div>
   );
   return (
     <section className="places-page">
@@ -262,23 +376,6 @@ export default function PlacesMap({
           <Plus size={18} /> Agregar lugar
         </button>
       </header>
-      <div className="places-tools">
-        <button
-          className="button secondary"
-          onClick={locate}
-          disabled={locating}
-        >
-          {locating ? (
-            <LoaderCircle size={17} className="spin" />
-          ) : (
-            <LocateFixed size={17} />
-          )}{" "}
-          Mi ubicación
-        </button>
-        <button className="button secondary" onClick={() => view("all")}>
-          <Expand size={17} /> Ver todos
-        </button>
-      </div>
       {locationMessage && (
         <p className="places-message" role="status">
           {locationMessage}
@@ -319,7 +416,15 @@ export default function PlacesMap({
               <input
                 id="place-search"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  searchGeneration.current++;
+                  lastAttempt.current = "";
+                  setSearching(false);
+                  setResults([]);
+                  setError("");
+                  setSearchMessage("");
+                  setQuery(event.target.value);
+                }}
                 placeholder="Calle, número y ciudad, o enlace de Maps"
                 minLength={3}
                 maxLength={2048}
@@ -336,8 +441,9 @@ export default function PlacesMap({
               </button>
             </div>
             <small>
-              Buscá una dirección o elegí el punto tocando el mapa. Búsqueda:
-              Photon.
+              Pegá un enlace y completamos los datos automáticamente. Para una
+              dirección, tocá Buscar. También podés elegir el punto en el mapa.
+              Búsqueda: Photon.
             </small>
           </form>
           {searchMessage && (
@@ -376,7 +482,10 @@ export default function PlacesMap({
               Nombre del lugar
               <input
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  fieldRevision.current.name++;
+                  setName(event.target.value);
+                }}
                 maxLength={100}
                 required
                 disabled={busy}
@@ -403,7 +512,10 @@ export default function PlacesMap({
               Dirección guardada
               <input
                 value={address}
-                onChange={(event) => setAddress(event.target.value)}
+                onChange={(event) => {
+                  fieldRevision.current.address++;
+                  setAddress(event.target.value);
+                }}
                 maxLength={400}
                 disabled={busy}
               />
@@ -438,7 +550,12 @@ export default function PlacesMap({
               </button>
               <button
                 className="button primary"
-                disabled={!candidate || busy || searching}
+                disabled={
+                  !candidate ||
+                  busy ||
+                  searching ||
+                  (isMapsLink(query) && lastAttempt.current !== query.trim())
+                }
               >
                 {busy ? (
                   <LoaderCircle className="spin" size={17} />

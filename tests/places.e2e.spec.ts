@@ -45,6 +45,21 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
   const title = "Café de ejemplo " + info.project.name;
   let ids: string[] = [];
   try {
+    await page.route("**/api/places/resolve", (route) =>
+      route.fulfill({
+        json: {
+          results: [
+            {
+              name: "Café de ejemplo",
+              address: "Corrientes 100, Buenos Aires",
+              lat: -34.6037,
+              lng: -58.3816,
+              addressApproximate: true,
+            },
+          ],
+        },
+      }),
+    );
     await page
       .getByRole("button", { name: "Agregar lugar", exact: true })
       .click();
@@ -53,8 +68,9 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
       .fill(
         "https://www.google.com/maps/search/?api=1&query=-34.6037,-58.3816",
       );
-    await page.getByRole("button", { name: "Buscar", exact: true }).click();
-    await page.locator(".place-search-results button").click();
+    await expect(page.getByLabel("Dirección guardada")).toHaveValue(
+      "Corrientes 100, Buenos Aires",
+    );
     await page.getByLabel("Nombre del lugar", { exact: true }).fill(title);
     await page
       .getByLabel("Nota sobre este lugar")
@@ -183,6 +199,89 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
     for (const id of ids)
       await page.request.delete("/api/places/" + id, { headers });
   }
+});
+
+test("Maps links fill the draft automatically, preserve corrections and discard stale replies without saving", async ({
+  page,
+}) => {
+  await login(page);
+  const before = (await (await page.request.get("/api/library")).json()).places;
+  let releaseFirst!: () => void;
+  const firstPending = new Promise<void>((resolve) => {
+    releaseFirst = resolve;
+  });
+  let releaseThird!: () => void;
+  const thirdPending = new Promise<void>((resolve) => {
+    releaseThird = resolve;
+  });
+  const queries: string[] = [];
+  await page.route("**/api/places/resolve", async (route) => {
+    const query = route.request().postDataJSON().query as string;
+    queries.push(query);
+    if (query.endsWith("first")) await firstPending;
+    if (query.endsWith("third")) await thirdPending;
+    const title = query.endsWith("second")
+      ? "Segundo café"
+      : query.endsWith("third")
+        ? "Tercer café"
+        : "Primer café";
+    await route.fulfill({
+      json: {
+        results: [
+          {
+            name: title,
+            address: title + " 100, Buenos Aires",
+            lat: -34.6037,
+            lng: -58.3816,
+            addressApproximate: true,
+          },
+        ],
+      },
+    });
+  });
+  await page
+    .getByRole("button", { name: "Agregar lugar", exact: true })
+    .click();
+  const query = page.getByLabel("Dirección o enlace de Google Maps");
+  await query.fill("https://maps.app.goo.gl/first");
+  await expect.poll(() => queries.length).toBe(1);
+  await query.fill("https://maps.app.goo.gl/second");
+  await expect(
+    page.getByLabel("Nombre del lugar", { exact: true }),
+  ).toHaveValue("Segundo café");
+  await expect(page.getByLabel("Dirección guardada")).toHaveValue(
+    "Segundo café 100, Buenos Aires",
+  );
+  releaseFirst();
+  await expect(
+    page.getByLabel("Nombre del lugar", { exact: true }),
+  ).toHaveValue("Segundo café");
+  await query.fill("https://maps.app.goo.gl/third");
+  await expect.poll(() => queries.length).toBe(3);
+  await page
+    .getByLabel("Nombre del lugar", { exact: true })
+    .fill("Nuestro nombre personal");
+  await page.getByLabel("Dirección guardada").fill("Mi corrección 123");
+  releaseThird();
+  await expect(
+    page.getByRole("button", { name: "Guardar lugar", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByLabel("Nombre del lugar", { exact: true }),
+  ).toHaveValue("Nuestro nombre personal");
+  await expect(page.getByLabel("Dirección guardada")).toHaveValue(
+    "Mi corrección 123",
+  );
+  await expect(page.locator(".place-search-results")).toHaveCount(0);
+  expect(queries).toHaveLength(3);
+  expect(
+    (await (await page.request.get("/api/library")).json()).places,
+  ).toEqual(before);
+  await fits(page);
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(
+    (await (await page.request.get("/api/library")).json()).places,
+  ).toEqual(before);
 });
 
 test("map searches candidates, allows manual pin, and location is temporary with permission only on request", async ({

@@ -56,8 +56,10 @@ export interface PlaceCandidate {
   lat: number;
   lng: number;
   approximate?: boolean;
+  addressApproximate?: boolean;
 }
-export interface Place extends Omit<PlaceCandidate, "approximate"> {
+export interface Place
+  extends Omit<PlaceCandidate, "approximate" | "addressApproximate"> {
   id: string;
   category: PlaceCategory;
   note: string;

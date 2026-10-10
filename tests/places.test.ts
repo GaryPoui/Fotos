@@ -53,7 +53,7 @@ it("resolves short redirects only to allowed Maps destinations and never scrapes
   expect(await resolve("https://maps.app.goo.gl/example")).toMatchObject([
     { lat: -34.6, lng: -58.4 },
   ]);
-  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher).toHaveBeenCalledTimes(2); // Redirect, then address lookup; never Maps HTML.
   expect(fetcher.mock.calls[0]).toBeDefined();
   const unsafe = vi.fn(
     async () =>
@@ -135,6 +135,70 @@ it("searches Photon GeoJSON explicitly with bounded cache, throttles and handles
       fetcher: (async () => Response.json({ features: [] })) as typeof fetch,
     })("Lugar inexistente"),
   ).toEqual([]);
+});
+
+it("enriches Maps points with a nearby address without moving the original point or losing it on failure", async () => {
+  const link =
+    "https://www.google.com/maps/place/Nuestro+Cafe/@-34,-58,15z/data=!3d-34.6!4d-58.4";
+  const fetcher = vi.fn(async (_url: RequestInfo | URL) =>
+    Response.json({
+      features: [
+        {
+          geometry: { coordinates: [-58.40005, -34.60005] },
+          properties: {
+            name: "Otra etiqueta",
+            street: "Corrientes",
+            housenumber: "100",
+            city: "Buenos Aires",
+          },
+        },
+        {
+          geometry: { coordinates: [-58.5, -34.7] },
+          properties: { street: "Lejana", housenumber: "999" },
+        },
+      ],
+    }),
+  );
+  const resolve = createPlaceResolver({ fetcher: fetcher as typeof fetch });
+  expect(await resolve(link)).toEqual([
+    {
+      name: "Nuestro Cafe",
+      address: "Corrientes 100, Buenos Aires",
+      lat: -34.6,
+      lng: -58.4,
+      addressApproximate: true,
+    },
+  ]);
+  const url = new URL(fetcher.mock.calls[0]![0] as unknown as string);
+  expect(url.pathname).toBe("/reverse");
+  expect(url.searchParams.get("lat")).toBe("-34.6");
+  expect(url.searchParams.get("lon")).toBe("-58.4");
+  expect(url.searchParams.get("radius")).toBe("0.1");
+  await resolve(link);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  await expect(
+    resolve(link.replace("-34.6!", "-34.61!")),
+  ).rejects.toMatchObject({ status: 429 });
+  const failed = createPlaceResolver({
+    fetcher: (async () => {
+      throw new Error("Offline");
+    }) as typeof fetch,
+  });
+  expect(await failed(link)).toEqual([
+    { name: "Nuestro Cafe", address: "", lat: -34.6, lng: -58.4 },
+  ]);
+  const distant = createPlaceResolver({
+    fetcher: (async () =>
+      Response.json({
+        features: [
+          {
+            geometry: { coordinates: [-58.5, -34.7] },
+            properties: { street: "Lejana" },
+          },
+        ],
+      })) as typeof fetch,
+  });
+  expect((await distant(link))[0].address).toBe("");
 });
 
 it("stores places privately across restart without rewriting historical content", async () => {
