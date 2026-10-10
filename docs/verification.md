@@ -156,3 +156,5 @@ Evidencia local en test-results/ (ignorada por Git).
 - Build/tipos PASS; galería y portada existentes móvil/escritorio 4 PASS; nuevo recorrido en 360/390/740/1440 px 2 PASS: scroll local, flechas y extremos, filtro, títulos largos y modal dentro del viewport. Capturas responsive-albums y responsive-modal por ancho, con datos demo.
 - Versión anterior conservada en etiqueta backup/pre-responsive-2026-10-09 (4b691db), subida a GitHub. Publicación pendiente.
 
+- Publicado 5f4694f en Render Live. Bundle público verificado en 360/390/1440 px: 16 álbumes, ancho del documento correcto, avance y regreso con flechas, portada y modal dentro de pantalla PASS. Biblioteca/archivos demo interceptados localmente; ningún dato personal modificado. Capturas render-responsive-albums y render-responsive-modal por ancho.
+

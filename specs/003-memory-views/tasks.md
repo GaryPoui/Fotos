@@ -22,4 +22,4 @@ Entregas incrementales con validación, commit/push y converge.
 
 ## Responsive y álbumes
 - [X] T009 [US1] Reproducir y corregir expansión de álbumes, portada y visor; añadir flechas de recorrido accesibles móvil/escritorio.
-- [ ] T010 [US1] Verificar biblioteca grande, tamaños móviles/escritorio, selección, modal, reduced motion; compilar, publicar y registrar evidencia.
+- [X] T010 [US1] Verificar biblioteca grande, tamaños móviles/escritorio, selección, modal, reduced motion; compilar, publicar y registrar evidencia.
