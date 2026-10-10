@@ -12,3 +12,6 @@ shared/types.ts; shared/albums.ts; server/app.ts; src/App.tsx; src/components/{R
 **Structure Decision**: Ampliación pequeña de la web y tabla meta actuales.
 ## Delivery
 Respaldo privado actual y main sincronizado; pruebas de API antes del código; commit/push diseño; implementación; build, integración y recorridos mobile/PC; CI; deploy manual Render; prueba pública sintética sin editar álbumes personales y comparación de datos/originales.
+
+## Follow-up: Botón sobre la portada
+Posicionar el botón de edición como hermano del botón que abre el álbum, sobre la esquina superior derecha de la imagen. Usar lápiz de 14 px y círculo visible de 28 px dentro de un control de 44 px. Conservar aria-label, foco de teclado y editor existentes. Cambio exclusivamente JSX/CSS, sin escrituras de datos ni cambios de almacenamiento. Compilar, verificar recorridos existentes de álbumes y responsive, publicar y revisar posición en 360/390/1440 px con datos sintéticos.

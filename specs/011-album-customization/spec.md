@@ -39,6 +39,7 @@ Elijo una de las fotos del álbum como portada sin reemplazar el archivo origina
 - **FR-006**: Cancelación y errores MUST conservar lo guardado y evitar guardados parciales de nombre y portada.
 - **FR-007**: Selección MUST funcionar a 360 px y PC, con teclado, sesión privada y sin nuevos servicios de pago.
 - **FR-008**: Copias exportadas MUST incluir nombres y portadas elegidos; integración y navegador MUST verificar preservación.
+- **FR-009**: El acceso a editar MUST mostrarse como un lápiz pequeño en la esquina superior derecha de la portada, con nombre accesible y área táctil de 44 px, en móvil y PC.
 ### Key Entities
 - **Álbum**: Grupo de recuerdos con identidad estable, nombre visible y portada opcional.
 - **Portada**: Referencia a una foto existente del grupo; no modifica ni duplica archivos.

@@ -2284,6 +2284,7 @@ input[type="range"] {
   overscroll-behavior-x: contain;
 }
 .album-card {
+  position: relative;
   flex: 0 0 150px;
   min-width: 0;
   scroll-snap-align: start;
@@ -2367,19 +2368,38 @@ input[type="range"] {
   }
 }
 .album-edit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 100%;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   min-height: 44px;
-  margin-top: 5px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--sky);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: var(--ink);
   cursor: pointer;
-  font-size: 12px;
+}
+.album-edit::before {
+  content: "";
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 6px rgba(39, 65, 78, 0.16);
+  pointer-events: none;
+}
+.album-edit svg {
+  position: relative;
+}
+.album-edit:hover::before {
+  background: var(--sky);
 }
 .album-preview {
   display: grid;

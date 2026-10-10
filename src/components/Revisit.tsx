@@ -166,7 +166,16 @@ export function Revisit({
                     </small>
                   </span>
                 </button>
-                {!cloudEnabled && <button className="album-edit" aria-label={"Editar álbum " + title} onClick={() => onEditAlbum(group.name)}><Pencil size={15} /><span>Editar</span></button>}
+                {!cloudEnabled && (
+                  <button
+                    className="album-edit"
+                    aria-label={"Editar álbum " + title}
+                    title="Editar álbum"
+                    onClick={() => onEditAlbum(group.name)}
+                  >
+                    <Pencil size={14} aria-hidden="true" />
+                  </button>
+                )}
                 </article>
               );
             })}
