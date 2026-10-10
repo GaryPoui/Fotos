@@ -158,3 +158,5 @@ Evidencia local en test-results/ (ignorada por Git).
 
 - Publicado 5f4694f en Render Live. Bundle público verificado en 360/390/1440 px: 16 álbumes, ancho del documento correcto, avance y regreso con flechas, portada y modal dentro de pantalla PASS. Biblioteca/archivos demo interceptados localmente; ningún dato personal modificado. Capturas render-responsive-albums y render-responsive-modal por ancho.
 
+- CI Linux detectó ampliación del viewport móvil a 367 px al abrir un diálogo largo en pantalla de 360 px, pese a las pruebas locales aprobadas. Se añadió anclaje explícito del diálogo, contención de tamaño horizontal y scroll únicamente vertical; se vuelve a verificar sin relajar los límites de la prueba.
+
