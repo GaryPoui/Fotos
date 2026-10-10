@@ -6,3 +6,5 @@ All endpoints use current session; mutations and resolution require X-Requested-
 - DELETE /api/places/:id: validated UUID and existingplace,204; no other keys can be removed.
 - POST /api/places/resolve: {query:trimmed3–2048}; returns {results:Candidate[]}. No persistent writes. Explicit address or supported Maps URL only, no arbitrary network destinations. Search queue/cooldown cap and bounded cache.
 UI: Mapa tab, Mi ubicación, Ver todos, Agregar lugar, seven category filters; map+list in sync, safe DOM labels, editor inline with candidate choice/manual point, name/category/note fields, save/cancel, clear failure feedback, selected place edit/remove/Maps link.
+
+URL follow-up: resolve enriches exact coordinate links through bounded reverse geocoding without moving their coordinates. Candidate gains optional addressApproximate flag for a nearby suggested address. Missing/failed reverse returns original point with blank address (never coordinate text posing as street). A single Maps URL result prefills the UI automatically, while multiple results still require a choice. No persistence before explicit Save. Existing Place schema remains unchanged.

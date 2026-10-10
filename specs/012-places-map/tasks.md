@@ -18,9 +18,16 @@
 ## Phase 6: Delivery
 - [x] T012 Verificar PostgreSQL adapter, reinicio/preservación en tests/cloud.test.ts, navegador a360/390/1440 con lookup/tiles/geolocalización fixtures y retries en tests/places.e2e.spec.ts, build y suites completas.360/1440 locales;390 adicional en QA publicadoT013.
 - [x] T013 Commit/push, CI, publicar Render, proveedor real con consulta pública, QA público sintético sin guardar lugares reales, comparación históricos y evidencia en specs/012-places-map/verification.md.
+## Follow-up: importar enlace y pulir diseño
+- [x] T014 Guardar snapshot privado fresco en backups/pre-map-polish-2026-10-10/; extender spec/plan/research/contracts y commit/push.
+- [ ] T015 Cubrir reverse, exactitud del punto, caída del proveedor, automatización de URL y descarte de respuestas viejas en tests/places{.test,.e2e.spec}.ts; luego enriquecer URL en server/places.ts y autocompletar borrador en src/components/PlacesMap.tsx.
+- [ ] T016 Pulir mapa, controles y marcadores en src/components/{PlacesMap,PlaceCanvas}.tsx y src/styles.css; mantener tiles OSM, accesibilidad y atribución; revisión visual móvil/PC.
+- [ ] T017 Build y suites, commit/push/CI, publicar Render, verificar URL real pública y UI sintética, comparar todos los datos históricos y documentar evidencia.
+
 ## Dependencies
 T001→T002→T003/T004/T005→T006→T007→T008/T009→T010/T011→T012→T013. US2 requiere lugares de US1; US3 mapa de US2.
 ## Parallel opportunities
 Investigación read-only separada del diseño ejecutada por skill plan; tests/API/estilos compartidos se trabajan secuencialmente.
 ## Implementation strategy
 Completar tres historias antes de publicación; tests de riesgo antes de backend; datos sintéticos aislados; cambios de UI verificados sin mutar contenido personal.
+

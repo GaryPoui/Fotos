@@ -9,5 +9,10 @@ PASS antes/después del diseño: sesión/CSRF y SSRF allowlist; escrituras limit
 ## Project Structure
 shared/{types,places}.ts; server/{app,places}.ts; src/{App,styles,backup}; src/components/{PlacesMap,PlaceCanvas}.tsx; tests/{places.test.ts,cloud.test.ts,backup-browser.test.ts,places.e2e.spec.ts}; specs/012-places-map/{spec,plan,research,data-model,tasks,quickstart,verification}.md y contracts/places.md.
 **Structure Decision**: Ampliar web y adapter actuales con módulo autónomo; esconder nueva página en alternativa Firebase no desplegada.
+## Follow-up del 2026-10-10
+Resolver coordenadas de URL con Photon /reverse (lat/lon, radio máximo 100 m), preservar siempre el punto exacto de Maps y su nombre si está incluido; dirección cercana revisable y señal de aproximación. Si falla el proveedor, conservar punto utilizable sin inventar dirección. URLs cortas mantienen la allowlist y máximo cinco redirecciones; sin scraping. Caché y cooldown compartidos con búsquedas.
+Cliente: debounce 650 ms sólo para enlaces HTTPS de Maps, una resolución por texto; un resultado precarga campos y marcador, ambiguos permanecen a elegir. Generaciones y revisiones de campo impiden sobrescribir correcciones recientes. Guardado explícito. Diseño con marco blanco, barra integrada, mapa pastel y pines circulares por categoría; sólo la capa de tiles recibe el filtro visual, texto de la interfaz y marcadores conservan contraste. No cambio de almacenamiento ni actualización masiva de lugares existentes.
+
 ## Delivery
 Registrar diseño y tareas; snapshot DB/library privado fresco; tests críticos de servicio/API; código; build y suites; commit/push, CI, Render y QA público sintético con guardados interceptados; comparar datos históricos. Documentar límites de links opacos y servicios sin SLA. No modificar lugares o recuerdos reales para probar.
+

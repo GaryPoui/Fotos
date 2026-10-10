@@ -1,4 +1,8 @@
 # Research — 2026-10-10
+## Follow-up: enlaces y diseño
+Photon documenta `/reverse?lat=...&lon=...&radius=...`; se limita a 0.1 km para evitar adjudicar direcciones lejanas. El candidato conserva coordenadas de Maps, aunque el resultado reverse sea cercano; la dirección se presenta como sugerencia para revisar. Reverse sin calle o caída del proveedor no elimina el punto ni reemplaza datos guardados. [API reverse](https://github.com/komoot/photon/blob/master/docs/api-v1.md#reverse).
+Se conserva OSM, estilizando exclusivamente su capa de tiles y mejorando el marco y los controles. CARTO ahora documenta clave incluso para su servicio gratuito; no se agrega esa dependencia para un cambio estético. [Basemaps actuales](https://carto.com/basemaps/index.html).
+
 Research agent dispatched by speckit-plan reviewed primary sources and current library/policy details.
 
 ## Map and search

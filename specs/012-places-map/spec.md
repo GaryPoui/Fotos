@@ -52,6 +52,8 @@ Toco Mi ubicación y permito el acceso para ver mi posición actual en el mapa.
 - **FR-009**: Cambios MUST conservar el 100% de fotos, videos, cartas, títulos, canciones, fechas y ajustes anteriores; lugares MUST incluirse en copia exportada.
 - **FR-010**: Diseño MUST ser mobile first celeste/rosado, con teclado, controles44px y movimiento reducido; no requiere servicios de pago ni nuevas cuentas.
 - **FR-011**: Fallos de búsqueda, ubicación o mapa MUST mostrar explicación recuperable; no bloquear los lugares existentes.
+- **FR-012**: Pegar un enlace de Maps MUST iniciar una única resolución tras una pausa breve; si identifica un único lugar, completar nombre, dirección disponible y punto sin otro clic. Borrador revisable, nunca guardado automático. Resultados ambiguos requieren elegir; una dirección aproximada o ausente se informa. Cambiar consulta, corregir campos, cerrar o tocar el mapa descarta respuestas anteriores.
+- **FR-013**: Mapa MUST presentar una superficie clara, controles integrados, marcadores legibles y filtros cómodos en móvil y PC, con la atribución visible. El rediseño no cambia el proveedor ni requiere cuentas, claves o pagos.
 ### Key Entities
 - **Lugar**: Punto compartido con identidad estable, nombre, dirección, categoría, nota y fecha de creación.
 - **Resultado de búsqueda**: Candidato temporal pendiente de confirmar.
@@ -67,6 +69,6 @@ Toco Mi ubicación y permito el acceso para ver mi posición actual en el mapa.
 
 ## Assumptions
 - Ubicación corresponde al dispositivo actual; no se rastrea ni comparte en vivo el celular de la otra persona.
-- La dirección se busca sólo al enviar la consulta, sin autocompletado. La nota y el nombre privado no se envían al buscador.
+- Las direcciones se buscan al enviar la consulta; pegar un enlace de Maps inicia su resolución automáticamente. No hay autocompletado de direcciones. La nota y el nombre privado no se envían al buscador.
 - No se incluyen navegación giro a giro, rutas, reseñas ni importación masiva. Un enlace que sólo contiene una identificación opaca puede requerir elegir entre resultados o marcar el punto.
 - Se reutilizan hosting gratuito, sesión y almacenamiento privados existentes. Se muestra atribución del mapa y buscador.
