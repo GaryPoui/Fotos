@@ -8,8 +8,7 @@ CREATE TABLE IF NOT EXISTS rincon.media (
   size integer NOT NULL CHECK(size > 0), title text NOT NULL, date text NOT NULL,
   album text NOT NULL DEFAULT '', tags text NOT NULL DEFAULT '[]', favorite integer NOT NULL DEFAULT 0,
   artist text NOT NULL DEFAULT '', "createdAt" text NOT NULL,
-  "storedBytes" integer NOT NULL CHECK("storedBytes" >= size),
-  "capturedAt" text, "captureOffset" text, "dateSource" text
+  "storedBytes" integer NOT NULL CHECK("storedBytes" >= size)
 );
 CREATE TABLE IF NOT EXISTS rincon.notes (
   id text PRIMARY KEY, type text NOT NULL, title text NOT NULL, body text NOT NULL,

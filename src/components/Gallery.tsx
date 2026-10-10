@@ -166,8 +166,9 @@ export function Gallery({
       <div className="memory-caption">
         <h3>{item.title}</h3>
         <p>
-          {formatDate(item.date)}
-          {memoryTimeLabel(item)}
+          {timeReference === "upload" ? "Subida: " : ""}
+          {formatDate(clock(item).slice(0, 10))}
+          {clock(item).slice(11, 16) ? " · " + clock(item).slice(11, 16) : ""}
           {item.album && <span> · {item.album}</span>}
         </p>
       </div>

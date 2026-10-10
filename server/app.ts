@@ -330,12 +330,51 @@ export async function createApp(options: AppOptions) {
       ? JSON.parse(row.value)
       : { names: "Ailu y Tomy", title: "Nuestro rincón", since: "" };
   };
-  const mediaRows = async () =>
-    (
-      (await db
+  const timeDefaults = {
+    capturedAt: null,
+    captureOffset: null,
+    dateSource: null,
+  };
+  const readTime = (value?: string) => {
+    if (!value) return timeDefaults;
+    try {
+      return z
+        .object({
+          capturedAt: z.string().refine(validCaptureDate).nullable(),
+          captureOffset: z.string().refine(validCaptureOffset).nullable(),
+          dateSource: z.enum(["metadata", "upload"]),
+        })
+        .parse(JSON.parse(value));
+    } catch {
+      return timeDefaults;
+    }
+  };
+  const withTime = async (row: MediaRow): Promise<MediaRow> => {
+    const saved = (await db
+      .prepare("SELECT value FROM meta WHERE key=?")
+      .get("capture:" + row.id)) as { value: string } | undefined;
+    return { ...row, ...readTime(saved?.value) };
+  };
+  const mediaRows = async () => {
+    const [rows, times] = await Promise.all([
+      db
         .prepare("SELECT * FROM media ORDER BY date DESC, createdAt DESC")
-        .all()) as unknown as MediaRow[]
-    ).map(publicMedia);
+        .all(),
+      db.prepare("SELECT key,value FROM meta WHERE key LIKE 'capture:%'").all(),
+    ]);
+    const map = new Map(
+      (times as { key: string; value: string }[]).map((saved) => [
+        saved.key,
+        readTime(saved.value),
+      ]),
+    );
+    return (rows as MediaRow[]).map((row) =>
+      publicMedia({
+        ...row,
+        ...(map.get("capture:" + row.id) || timeDefaults),
+      }),
+    );
+  };
   const noteRows = async () =>
     (
       (await db
@@ -379,6 +418,7 @@ export async function createApp(options: AppOptions) {
       thumb = "";
     const uploadedKeys: string[] = [];
     let committed = false;
+    let timeKey = "";
     let releaseUpload!: () => void;
     const previousUpload = uploadTail;
     uploadTail = new Promise<void>((resolve) => {
@@ -399,7 +439,9 @@ export async function createApp(options: AppOptions) {
         .prepare("SELECT * FROM media WHERE id=?")
         .get(uploadId);
       if (existing) {
-        res.status(200).json(publicMedia(existing as unknown as MediaRow));
+        res
+          .status(200)
+          .json(publicMedia(await withTime(existing as unknown as MediaRow)));
         return;
       }
       const input = mediaInput.parse({
@@ -487,9 +529,22 @@ export async function createApp(options: AppOptions) {
         target = join(mediaDir, filename);
         renameSync(tempPath, target);
       }
+      // Optional chronology uses the existing persistent key/value store. No schema
+      // migration or historical row rewrite is needed. Media INSERT is the commit point.
+      if (automatic) {
+        timeKey = "capture:" + id;
+        await db
+          .prepare(
+            "INSERT INTO meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          )
+          .run(
+            timeKey,
+            JSON.stringify({ capturedAt, captureOffset, dateSource }),
+          );
+      }
       await db
         .prepare(
-          "INSERT INTO media (id,kind,filename,mime,size,title,date,album,tags,artist,createdAt,storedBytes,capturedAt,captureOffset,dateSource) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO media (id,kind,filename,mime,size,title,date,album,tags,artist,createdAt,storedBytes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         )
         .run(
           id,
@@ -504,9 +559,6 @@ export async function createApp(options: AppOptions) {
           input.artist,
           createdAt,
           storedBytes,
-          capturedAt,
-          captureOffset,
-          dateSource,
         );
       committed = true;
       target = "";
@@ -515,13 +567,22 @@ export async function createApp(options: AppOptions) {
         .status(201)
         .json(
           publicMedia(
-            (await db
-              .prepare("SELECT * FROM media WHERE id=?")
-              .get(id)) as unknown as MediaRow,
+            await withTime(
+              (await db
+                .prepare("SELECT * FROM media WHERE id=?")
+                .get(id)) as unknown as MediaRow,
+            ),
           ),
         );
     } finally {
       try {
+        if (!committed && timeKey) {
+          try {
+            await db.prepare("DELETE FROM meta WHERE key=?").run(timeKey);
+          } catch {
+            console.error("No se pudo limpiar la fecha de una subida fallida.");
+          }
+        }
         if (!committed && options.objectStorage && uploadedKeys.length) {
           try {
             await options.objectStorage.remove(uploadedKeys);
@@ -543,7 +604,7 @@ export async function createApp(options: AppOptions) {
       .prepare("SELECT * FROM media WHERE id=?")
       .get(id)) as unknown as MediaRow | undefined;
     if (!row) throw new ApiError(404, "Este recuerdo ya no está.");
-    return row;
+    return withTime(row);
   };
   app.patch("/api/media/:id", async (req, res) => {
     const row = await findMedia(String(req.params.id));
@@ -586,6 +647,7 @@ export async function createApp(options: AppOptions) {
     ])
       if (existsSync(path)) unlinkSync(path);
     await db.prepare("DELETE FROM media WHERE id=?").run(row.id);
+    await db.prepare("DELETE FROM meta WHERE key=?").run("capture:" + row.id);
     res.status(204).end();
   });
   app.get("/api/files/:id", async (req, res, next) => {

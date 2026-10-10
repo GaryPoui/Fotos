@@ -12,7 +12,7 @@ Leer EXIF del original antes de prepareImage, conservar por ítem en IndexedDB, 
 - Metadatos soportados JPEG/PNG/HEIC; otros formatos sin lectura usan subida. Sin transcodificación nueva.
 
 ## Constitution Check
-PASS antes/después del diseño: sesión y originales privados; respaldo fuera de Git; columnas opcionales aditivas; spec antes del código; integración y navegador; 360 px y controles 44 px; servicios gratuitos. Sin infracciones.
+PASS antes/después del diseño: sesión y originales privados; respaldo fuera de Git; registros opcionales en meta existente, sin DDL ni UPDATE histórico; spec antes del código; integración y navegador; 360 px y controles 44 px; servicios gratuitos. Sin infracciones.
 
 ## Project Structure
 ```text
@@ -21,12 +21,12 @@ shared/types.ts
 src/photo-metadata.ts
 src/upload-queue.ts
 src/components/{UploadDialog,Gallery,Viewer}.tsx
-server/{app,db,database}.ts
-supabase/{schema,photo-metadata}.sql
+server/app.ts
+supabase/schema.sql (sin cambios)
 tests/{metadata,api,e2e}.test / .spec.ts
 specs/010-photo-metadata/{spec,plan,research,data-model,quickstart,tasks}.md
 ```
 **Structure Decision**: Ampliación de la aplicación existente; ningún servicio o almacenamiento nuevo.
 
 ## Delivery
-Versión actual y tag primero; respaldo íntegro; pruebas de preservación; lectura/carga; filtros; checks locales y CI; ALTER seguro con verificación antes/después; deploy manual Render; comparación final de datos y hashes existentes.
+Versión actual y tag primero; respaldo íntegro; pruebas de preservación; lectura/carga; filtros; checks locales y CI; deploy manual Render; comparación final de datos y hashes existentes. La cronología se guarda en meta con clave capture:<id>, usando los permisos actuales del backend, sin modificar tablas ni credenciales.

@@ -122,8 +122,8 @@ describe("Photo calendar metadata", () => {
   });
 });
 
-describe("Non-destructive metadata schema", () => {
-  it("adds SQLite columns twice without changing historical rows or notes", () => {
+describe("Non-destructive chronology storage", () => {
+  it("reopens SQLite and stores optional chronology without changing historical rows or notes", () => {
     const dir = mkdtempSync(join(tmpdir(), "rincon-metadata-"));
     const old = new DatabaseSync(join(dir, "rincon.sqlite"));
     old.exec(`CREATE TABLE media (id TEXT PRIMARY KEY,kind TEXT,filename TEXT,mime TEXT,size INTEGER,title TEXT,date TEXT,album TEXT,tags TEXT,favorite INTEGER,artist TEXT,createdAt TEXT,storedBytes INTEGER);
@@ -138,9 +138,19 @@ describe("Non-destructive metadata schema", () => {
           string,
           unknown
         >;
-        expect(row).toMatchObject(before as object);
-        expect(row.capturedAt).toBeNull();
-        expect(row.dateSource).toBeNull();
+        expect(row).toEqual(before);
+        expect(row).not.toHaveProperty("capturedAt");
+        db.prepare(
+          "INSERT INTO meta VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        ).run(
+          "capture:new",
+          JSON.stringify({
+            capturedAt: "2021-02-14T23:58:07",
+            captureOffset: null,
+            dateSource: "metadata",
+          }),
+        );
+        expect(db.prepare("SELECT * FROM media").get()).toEqual(before);
         expect(db.prepare("SELECT body FROM notes").get()).toEqual({
           body: "Carta intacta",
         });
@@ -150,26 +160,41 @@ describe("Non-destructive metadata schema", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
-  it("adds PostgreSQL columns idempotently while preserving every previous field", async () => {
+  it("stores optional PostgreSQL chronology with existing permissions, preserving every previous field", async () => {
     const pg = new PGlite();
     try {
-      await pg.exec(
-        readFileSync("supabase/schema.sql", "utf8").replace(
-          ',\n  "capturedAt" text, "captureOffset" text, "dateSource" text',
-          "",
-        ),
-      );
+      await pg.exec(readFileSync("supabase/schema.sql", "utf8"));
       await pg.exec(
         `INSERT INTO rincon.media (id,kind,filename,mime,size,title,date,album,tags,favorite,artist,"createdAt","storedBytes") VALUES ('old','photo','same.jpg','image/jpeg',1,'Título intacto','2020-02-14','Álbum','[]',1,'','2026-10-09T15:00:00Z',1)`,
       );
       const before = (await pg.query("SELECT * FROM rincon.media")).rows;
-      await pg.exec(readFileSync("supabase/photo-metadata.sql", "utf8"));
-      await pg.exec(readFileSync("supabase/photo-metadata.sql", "utf8"));
+      expect(before[0]).not.toHaveProperty("capturedAt");
+      // A backend role with DML permission only; no schema ownership or DDL grants.
+      await pg.exec(
+        "CREATE ROLE backend; GRANT USAGE ON SCHEMA rincon TO backend; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA rincon TO backend; CREATE POLICY backend_meta ON rincon.meta TO backend USING (true) WITH CHECK (true); CREATE POLICY backend_media ON rincon.media TO backend USING (true) WITH CHECK (true); SET ROLE backend",
+      );
+      for (let i = 0; i < 2; i++)
+        await pg.query(
+          "INSERT INTO rincon.meta VALUES ($1,$2) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          [
+            "capture:new",
+            JSON.stringify({
+              capturedAt: "2021-02-14T23:58:07",
+              captureOffset: null,
+              dateSource: "metadata",
+            }),
+          ],
+        );
       const after = (await pg.query("SELECT * FROM rincon.media"))
         .rows as Record<string, unknown>[];
-      expect(after[0]).toMatchObject(before[0] as object);
-      expect(after[0].capturedAt).toBeNull();
-      expect(after[0].dateSource).toBeNull();
+      expect(after).toEqual(before);
+      expect(
+        (
+          await pg.query(
+            "SELECT value FROM rincon.meta WHERE key='capture:new'",
+          )
+        ).rows,
+      ).toHaveLength(1);
     } finally {
       await pg.close();
     }

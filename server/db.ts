@@ -31,11 +31,5 @@ export function openDb(dir: string) {
     db.exec(
       "ALTER TABLE media ADD COLUMN storedBytes INTEGER NOT NULL DEFAULT 0",
     );
-  const columns = db.prepare("PRAGMA table_info(media)").all() as {
-    name: string;
-  }[];
-  for (const name of ["capturedAt", "captureOffset", "dateSource"])
-    if (!columns.some((column) => column.name === name))
-      db.exec(`ALTER TABLE media ADD COLUMN ${name} TEXT`);
   return db;
 }

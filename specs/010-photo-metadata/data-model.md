@@ -1,5 +1,5 @@
 # Data model
-Media añade campos opcionales y nullable:
+Media expone campos opcionales y nullable, persistidos como JSON en meta con clave capture:<id> sólo para nuevas subidas automáticas. No se añaden columnas ni se reescriben filas media históricas:
 - capturedAt: string YYYY-MM-DDTHH:mm:ss; fecha de calendario real y hora 00–23, minuto/segundo 00–59. Reloj original sin conversión.
 - captureOffset: string ±HH:mm con máximo ±14:00, o null. Nunca inferido.
 - dateSource: metadata | upload | manual, o null para registros anteriores.
