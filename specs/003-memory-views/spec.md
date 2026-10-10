@@ -49,3 +49,8 @@ ViewPreference: vista elegida local; SlideshowState: índice y pausa, efímero.
 - Se usa disco persistente; no hay transcodificación ni sincronización offline.
 - La publicación online necesita un proveedor y contraseña definidos fuera de Git.
 - Los datos de ejemplo no se presentarán como recuerdos reales.
+
+## Responsive y álbumes (2026-10-09)
+- FR-008: Álbumes en fila acotada al ancho disponible, en móvil y escritorio, con flechas anterior/siguiente y deslizamiento táctil. Deshabilitar flechas en extremos y conservar selección/filtro.
+- FR-009: Muchos álbumes y títulos largos no amplían el documento. Portada, calendario y visor modal se ajustan desde 360 px; cerrar, navegar y acciones permanecen accesibles.
+- SC-006: Verificar 16 álbumes en 360/390/740/1440 px, sin desbordamiento, avance y regreso, selección, visor y movimiento reducido. No modificar datos privados ni almacenamiento.

@@ -727,3 +727,55 @@ for (const mode of ["normal", "blocked", "native-volume-ignored"] as const) {
     await expect(page.locator("audio")).toHaveCount(0);
   });
 }
+
+test("responsive albums stay contained and modal fits with many memories", async ({ page }, info) => {
+  const media = Array.from({ length: 16 }, (_, i) => ({ id: "demo-responsive-" + i, kind: "photo", title: "Vista demo " + i + " · " + "Un recuerdo muy especial juntos ".repeat(8), date: "2026-09-01", album: "Álbum " + String(i).padStart(2, "0") + " · " + "Juntos".repeat(6), tags: ["Demo"], favorite: false, artist: "", mime: "image/png", size: png.length, createdAt: "2026-09-01T12:00:00Z" }));
+  await page.route("**/api/library", async route => {
+    const original = await (await route.fetch()).json();
+    await route.fulfill({ json: { ...original, media, notes: [], settings: { names: "Ailu y Tomy", title: "Nuestro rincón", since: "2026-08-29", coverId: media[0].id, featuredId: media[1].id } } });
+  });
+  await page.route("**/api/files/demo-responsive-*", route => route.fulfill({ contentType: "image/png", body: png }));
+  await login(page);
+  for (const width of info.project.name === "mobile" ? [360, 390] : [740, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    await assertFits(page);
+    const albums = page.getByRole("region", { name: "Nuestros álbumes", exact: true });
+    const strip = albums.locator(".album-cards");
+    const next = albums.getByRole("button", { name: "Álbumes siguientes" });
+    const previous = albums.getByRole("button", { name: "Álbumes anteriores" });
+    await strip.evaluate(el => { el.scrollLeft = 0; });
+    await expect(previous).toBeDisabled();
+    await expect(next).toBeEnabled();
+    expect(await strip.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+    await next.click();
+    await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeGreaterThan(50);
+    await expect(previous).toBeEnabled();
+    await previous.click();
+    await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeLessThan(2);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await next.click();
+    await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeGreaterThan(50);
+    await strip.evaluate(el => { el.scrollLeft = el.scrollWidth; });
+    await expect(next).toBeDisabled();
+    await albums.getByRole("button", { name: "Ver álbum " + media[15].album, exact: true }).click();
+    await expect(page.locator(".active-memory-filter")).toContainText(media[15].album);
+    await assertFits(page);
+    await page.getByRole("button", { name: "Ver nuestra foto de portada" }).click();
+    const dialog = page.getByRole("dialog", { name: "Un momento nuestro" });
+    await expect(dialog).toBeVisible();
+    const bounds = await dialog.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(845);
+    await expect(dialog.getByRole("button", { name: "Cerrar", exact: true })).toBeInViewport();
+    await expect(dialog.locator(".viewer-stage img")).toBeInViewport();
+    await assertFits(page);
+    await page.screenshot({ path: "test-results/responsive-modal-" + width + ".png" });
+    await dialog.getByRole("button", { name: "Cerrar", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await albums.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "test-results/responsive-albums-" + width + ".png" });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+  }
+});

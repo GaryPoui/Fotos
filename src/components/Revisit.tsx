@@ -1,4 +1,7 @@
-import { CalendarHeart, ArrowRight, Images, Play, Heart } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import {
+  CalendarHeart, ArrowRight, Images, Play, Heart, ChevronLeft, ChevronRight,
+} from "lucide-react";
 import type { Media } from "../../shared/types";
 import { mediaUrl, formatDate } from "../lib";
 import { albumGroups, onThisDay } from "../moments";
@@ -19,6 +22,37 @@ export function Revisit({
 }) {
   const memories = onThisDay(items, today),
     albums = albumGroups(items);
+  const albumStrip = useRef<HTMLDivElement>(null);
+  const albumStripId = useId();
+  const [canPrevious, setCanPrevious] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+  const updateAlbumEdges = () => {
+    const strip = albumStrip.current;
+    if (!strip) return;
+    setCanPrevious(strip.scrollLeft > 1);
+    setCanNext(strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1);
+  };
+  useEffect(() => {
+    const strip = albumStrip.current;
+    if (!strip) return;
+    updateAlbumEdges();
+    const observer = new ResizeObserver(updateAlbumEdges);
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, [albums.length]);
+  const moveAlbums = (direction: number) => {
+    const strip = albumStrip.current;
+    if (!strip || !strip.firstElementChild) return;
+    const step =
+      strip.firstElementChild.getBoundingClientRect().width +
+      parseFloat(getComputedStyle(strip).columnGap);
+    const visible = Math.max(1, Math.floor(strip.clientWidth / step));
+    strip.scrollBy({
+      left: direction * step * visible,
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant" : "smooth",
+    });
+  };
   return (
     <div className="revisit">
       <section className="on-this-day" aria-label="Un día como hoy">
@@ -81,8 +115,23 @@ export function Revisit({
               </span>
               <h3>Nuestros álbumes</h3>
             </div>
+            <div className="album-navigation" aria-label="Recorrer álbumes">
+              <button
+                className="icon-button" aria-label="Álbumes anteriores"
+                aria-controls={albumStripId} disabled={!canPrevious}
+                onClick={() => moveAlbums(-1)}
+              ><ChevronLeft size={20} /></button>
+              <button
+                className="icon-button" aria-label="Álbumes siguientes"
+                aria-controls={albumStripId} disabled={!canNext}
+                onClick={() => moveAlbums(1)}
+              ><ChevronRight size={20} /></button>
+            </div>
           </div>
-          <div className="album-cards">
+          <div
+            className="album-cards" id={albumStripId} ref={albumStrip}
+            onScroll={updateAlbumEdges}
+          >
             {albums.map((group) => {
               const cover = group.media.find((i) => i.kind === "photo");
               return (

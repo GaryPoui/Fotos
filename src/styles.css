@@ -836,6 +836,8 @@ main {
   padding: 23px 20px 28px;
   margin: auto auto 0;
   width: 100%;
+  min-width: 0;
+  max-inline-size: min(560px, 100vw);
   max-width: 560px;
   max-height: 92dvh;
   overflow: auto;
@@ -858,11 +860,14 @@ main {
   margin-bottom: 21px;
 }
 .dialog-head h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 25px;
   letter-spacing: -0.6px;
 }
 .dialog-wide {
   max-width: 880px;
+  max-inline-size: min(880px, 100vw);
 }
 .form-error {
   font-size: 12px;
@@ -2001,6 +2006,7 @@ input[type="range"] {
 }
 .memory-home {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   padding: 30px 0;
   min-width: 0;
@@ -2141,7 +2147,7 @@ input[type="range"] {
 }
 @media (min-width: 740px) {
   .memory-home {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
     gap: 25px;
     padding: 45px 0;
@@ -2162,8 +2168,29 @@ input[type="range"] {
 
 .revisit {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   margin-bottom: 24px;
+}
+.revisit > section,
+.memory-home > *,
+.revisit-heading > div:first-child {
+  min-width: 0;
+}
+.album-navigation {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.album-navigation .icon-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.album-navigation .icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 .on-this-day {
   background: linear-gradient(120deg, #edf6fc, #fff1f6);
@@ -2231,10 +2258,14 @@ input[type="range"] {
 }
 .album-cards {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   gap: 12px;
   overflow-x: auto;
   padding: 2px 2px 12px;
   scroll-snap-type: x proximity;
+  scroll-padding-inline: 2px;
+  overscroll-behavior-x: contain;
 }
 .album-cards button {
   flex: 0 0 150px;

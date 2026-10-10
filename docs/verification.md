@@ -149,3 +149,10 @@ Evidencia local en test-results/ (ignorada por Git).
 
 - Publicado commit 7acbb59: Render dep-db45huu0tbcc73d76ang Live. Verificación HTTPS con ingreso real y audios demo interceptados sólo en el navegador: volumen 15%, reproducción real, navegación, siguiente, volumen 100%, pausa y salida PASS móvil/escritorio. Capturas render-background-mobile.png y render-background-desktop.png; no se modificaron recuerdos ni canciones personales.
 
+
+## Responsive y álbumes (2026-10-09)
+- Reproducido desbordamiento con 16 álbumes antes de corregir. Causa: tamaño mínimo intrínseco del grid Revisit propagaba el ancho de la fila de álbumes al documento.
+- Columnas minmax(0,1fr), contenedores min-width:0, fila de álbumes acotada con flechas de 44px, estado de extremos, scroll local y movimiento reducido. Portada y diálogo acotados al viewport.
+- Build/tipos PASS; galería y portada existentes móvil/escritorio 4 PASS; nuevo recorrido en 360/390/740/1440 px 2 PASS: scroll local, flechas y extremos, filtro, títulos largos y modal dentro del viewport. Capturas responsive-albums y responsive-modal por ancho, con datos demo.
+- Versión anterior conservada en etiqueta backup/pre-responsive-2026-10-09 (4b691db), subida a GitHub. Publicación pendiente.
+

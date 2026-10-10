@@ -33,3 +33,6 @@ La presentación inline comienza activa (excepto movimiento reducido o un solo r
 de 7000 ms; se conserva la pausa existente por interacción, reproducción de video y pestaña oculta.
 El escenario recorta con overflow:clip para evitar desplazamientos internos hacia tarjetas 3D fuera del borde.
 La prueba de selección lateral toca una superficie expuesta real, respetando la superposición por perspectiva.
+
+## Corrección responsive 2026-10-09
+Reproducir expansión por tamaño mínimo intrínseco de elementos grid con fila de álbumes. Aplicar min-width:0 a sus contenedores y columnas minmax(0,1fr), limitar tamaños de imágenes y dialog al viewport. Revisit controla scroll local con flechas de 44px, scroll-snap, estado de extremos actualizado por ResizeObserver y scroll; respetar movimiento reducido. Verificación con biblioteca sintética grande, títulos largos y visor a varios anchos. Crear etiqueta Git de versión anterior. Sin cambios de API ni persistencia.
