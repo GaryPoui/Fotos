@@ -8,15 +8,18 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { Dialog } from "./Dialog";
-import { bytes, today, upload } from "../lib";
+import { api, bytes, today, upload } from "../lib";
+import { fileLimit, availableBytes } from "../../shared/storage";
 import { prepareImage } from "../prepare-image";
 import { cloudEnabled } from "../cloud/config";
-import type { AlbumCustomization } from "../../shared/types";
+import type { AlbumCustomization, Library } from "../../shared/types";
 import { albumTitle, albumKey } from "../../shared/albums";
 import { loadDraft, saveDraft, type UploadItem as Item } from "../upload-queue";
 export function UploadDialog({
   type,
   maxFile,
+  maxVideoFile = maxFile,
+  available,
   albums,
   preferences = [],
   onClose,
@@ -24,11 +27,16 @@ export function UploadDialog({
 }: {
   type: "memories" | "music";
   maxFile: number;
+  maxVideoFile?: number;
+  available?: number;
   albums: string[];
   preferences?: AlbumCustomization[];
   onClose: () => void;
   onChanged: (message: string) => Promise<void>;
 }) {
+  const [space, setSpace] = useState(available);
+  useEffect(() => setSpace(available), [available]);
+  const limitFor = (file: File) => fileLimit(file, maxFile, maxVideoFile);
   const [items, setItems] = useState<Item[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -114,9 +122,9 @@ export function UploadDialog({
     const added = Array.from(files).map((file) => ({
       id: crypto.randomUUID(),
       file,
-      status: file.size > maxFile ? ("error" as const) : ("pending" as const),
+      status: file.size > limitFor(file) ? ("error" as const) : ("pending" as const),
       progress: 0,
-      error: file.size > maxFile ? "Supera " + bytes(maxFile) : undefined,
+      error: file.size > limitFor(file) ? "Supera " + bytes(limitFor(file)) : undefined,
     }));
     setItems((old) => [...old, ...added].slice(0, 20));
     if (items.length + added.length > 20)
@@ -159,7 +167,8 @@ export function UploadDialog({
           break;
         }
         if (items[i].status === "done") continue;
-        if (items[i].file.size > maxFile) {
+        if (items[i].file.size > limitFor(items[i].file)) {
+          change(i, { status: "error", error: "Supera " + bytes(limitFor(items[i].file)) });
           failed++;
           continue;
         }
@@ -194,6 +203,8 @@ export function UploadDialog({
           remaining[i] = { ...remaining[i], status: "done" };
           await saveDraft(draft(remaining)).catch(() => {});
           succeeded++;
+          try { setSpace(availableBytes((await api<Library>("/library")).storage)); }
+          catch { setSpace(old => old === undefined ? undefined : Math.max(0, old - prepared.size)); }
         } catch (e) {
           const aborted = (e as Error).name === "AbortError";
           change(i, {
@@ -315,7 +326,8 @@ export function UploadDialog({
               e.target.value = "";
             }}
           />
-          <small>Hasta {bytes(maxFile)} por archivo · 20 por tanda</small>
+          <small>{type === "memories" ? <>Videos hasta {bytes(maxVideoFile)} · Fotos hasta {bytes(maxFile)}</> : <>Canciones hasta {bytes(maxFile)}</>} · 20 por tanda</small>
+          {space !== undefined && <small className="upload-space">{bytes(space)} disponibles para guardar nuevos recuerdos</small>}
           {type === "memories" && (
             <small>
               HEIC de iPhone: se convierte a JPEG acá, sin enviarlo a otros

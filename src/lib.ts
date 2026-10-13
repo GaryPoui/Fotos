@@ -63,7 +63,7 @@ export function upload(
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/media");
     if (options.id) xhr.setRequestHeader("X-Upload-Id", options.id);
-    xhr.timeout = 120000;
+    xhr.timeout = (file.type.startsWith("video/") || /\.(mp4|webm)$/i.test(file.name)) && file.size > 50_000_000 ? 15 * 60 * 1000 : 120000;
     const abort = () => xhr.abort();
     options.signal?.addEventListener("abort", abort, { once: true });
     xhr.onloadend = () => options.signal?.removeEventListener("abort", abort);

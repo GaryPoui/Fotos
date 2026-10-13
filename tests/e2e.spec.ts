@@ -41,6 +41,25 @@ async function uploadPhoto(page: Page, title: string) {
   await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
+test("shows remaining storage and separate video limits in a mobile friendly uploader", async ({page}, info) => {
+  await page.route("**/api/library", async route => {
+    const response = await route.fetch();
+    const library = await response.json();
+    library.storage = { used: 245222910, limit: 900000000, maxFile: 50000000, maxVideoFile: 200*1024*1024, available:654777090 };
+    await route.fulfill({ response, json: library });
+  });
+  await login(page);
+  if(info.project.name === "mobile") await page.setViewportSize({width:360,height:900});
+  await expect(page.getByRole("region",{name:"Espacio de nuestro rincón"})).toContainText("624.4 MB disponibles");
+  await expect(page.getByRole("meter",{name:"Espacio usado"})).toHaveAttribute("aria-valuenow","245222910");
+  await assertFits(page);
+  await page.getByRole("button",{name:"Subir recuerdos",exact:true}).click();
+  await expect(page.getByRole("dialog")).toContainText("Videos hasta 200.0 MB · Fotos hasta 47.7 MB");
+  await expect(page.getByRole("dialog")).toContainText("624.4 MB disponibles");
+  await assertFits(page);
+  await page.getByRole("dialog").screenshot({path:`test-results/storage-uploader-${info.project.name}.png`});
+});
+
 test("album editing persists title and cover without splitting new uploads, handles cancellation and retry", async ({ page }, info) => {
   await login(page);
   if (info.project.name === "mobile") await page.setViewportSize({ width: 360, height: 900 });

@@ -2526,3 +2526,10 @@ input[type="range"] {
   .place-wide { grid-column: 1 / -1; }
   .place-search > div { flex-wrap: nowrap; }
 }
+.storage-summary{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:0 0 1.25rem;padding:1rem 1.2rem;border:1px solid #e4edf4;border-radius:20px;background:linear-gradient(110deg,#edf7fc,#fff2f6);min-width:0}
+.storage-summary>div:first-child{display:grid;gap:.25rem;min-width:0}
+.storage-summary strong{font-size:.95rem}.storage-summary small{color:#526977;font-size:.8rem}
+.storage-meter{height:8px;flex:1;min-width:100px;max-width:320px;overflow:hidden;border-radius:10px;background:#dce8ef}
+.storage-meter span{display:block;height:100%;background:linear-gradient(90deg,#88c8e7,#e8a5bf);border-radius:inherit}
+.upload-space{color:#395b70;font-weight:600}
+@media(max-width:480px){.storage-summary{gap:.75rem;padding:.9rem 1rem}.storage-meter{flex-basis:100%;max-width:none}}

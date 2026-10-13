@@ -35,7 +35,7 @@ export interface Library {
   media: Media[];
   notes: Note[];
   settings: Settings;
-  storage: { used: number; limit: number; maxFile: number };
+  storage: { used: number; limit: number; maxFile: number; maxVideoFile?: number; available?: number; reserved?: number };
 }
 export interface AlbumCustomization {
   album: string;

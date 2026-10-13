@@ -24,6 +24,8 @@ import { resolve, join } from "node:path";
 import { z, ZodError } from "zod";
 import { openDatabase, type Database } from "./database.js";
 import type { ObjectStorage } from "./cloud-storage.js";
+import { videoDescriptor } from "./video-parts.js";
+import { videoUploads } from "./video-uploads.js";
 import { inspectFile, thumbnail } from "./files.js";
 import type { Media, Note, Settings, AlbumCustomization, Place, PlaceCandidate } from "../shared/types.js";
 import { albumKey, albumTitle, albumNameKey } from "../shared/albums.js";
@@ -108,6 +110,7 @@ export interface AppOptions {
   origin?: string;
   trustProxy?: number;
   maxFileBytes?: number;
+  maxVideoFileBytes?: number;
   maxStorageBytes?: number;
   databaseUrl?: string;
   databaseCa?: string;
@@ -169,8 +172,11 @@ export async function createApp(options: AppOptions) {
     .prepare("DELETE FROM sessions WHERE expires < ? OR version != ?")
     .run(Date.now(), version);
   const maxFile = options.maxFileBytes ?? 200 * 1024 * 1024,
+    maxVideoFile = options.maxVideoFileBytes ?? maxFile,
     maxStorage = options.maxStorageBytes ?? 1024 * 1024 * 1024;
-  const used = async () =>
+  const journals = options.objectStorage ? videoUploads(db, options.objectStorage) : undefined;
+  await journals?.recover();
+  const used = async (exclude?: string) =>
     Number(
       (
         (await db
@@ -183,7 +189,7 @@ export async function createApp(options: AppOptions) {
           bytes: number;
         }
       ).bytes,
-    );
+    ) + (await journals?.reserved(exclude) ?? 0);
   const app = express();
   app.disable("x-powered-by");
   if (options.trustProxy) app.set("trust proxy", options.trustProxy);
@@ -387,16 +393,17 @@ export async function createApp(options: AppOptions) {
     await db.prepare("DELETE FROM meta WHERE key=?").run("place:"+id);
     res.status(204).end();
   });
-  app.get("/api/library", async (_req, res) =>
+  app.get("/api/library", async (_req, res) => {
+    const occupied = await used();
     res.json({
       media: await mediaRows(),
       notes: await noteRows(),
       settings: await getSettings(),
       albums: await getAlbums(),
       places: await getPlaces(),
-      storage: { used: await used(), limit: maxStorage, maxFile },
-    }),
-  );
+      storage: { used: occupied, limit: maxStorage, maxFile, maxVideoFile, available: Math.max(0, maxStorage - occupied), reserved: await journals?.reserved() ?? 0 },
+    });
+  });
   app.patch("/api/albums", async (req, res) => {
     const input = albumInput.parse(req.body);
     const items = (await mediaRows()).filter((item) => item.kind !== "audio");
@@ -427,7 +434,7 @@ export async function createApp(options: AppOptions) {
   const upload = multer({
     dest: tmpDir,
     limits: {
-      fileSize: maxFile,
+      fileSize: Math.max(maxFile, maxVideoFile),
       files: 1,
       fields: 8,
       parts: 9,
@@ -442,6 +449,8 @@ export async function createApp(options: AppOptions) {
       thumb = "";
     const uploadedKeys: string[] = [];
     let committed = false;
+    let reservedId = "";
+    let pendingId = "", pendingFilename = "", insertAttempted = false;
     let releaseUpload!: () => void;
     const previousUpload = uploadTail;
     uploadTail = new Promise<void>((resolve) => {
@@ -483,13 +492,23 @@ export async function createApp(options: AppOptions) {
           "No pudimos leer ese formato. Usá una foto, video o audio compatible.",
         );
       }
-      if ((await used()) + req.file.size > maxStorage)
+      if (req.file.size > (detected.kind === "video" ? maxVideoFile : maxFile))
+        throw new ApiError(413, detected.kind === "video" ? "Este video supera el límite permitido." : "Las fotos y canciones tienen un límite de " + (maxFile / 1024 / 1024).toFixed(1) + " MB.");
+      if ((await used(uploadId)) + req.file.size > maxStorage)
         throw new ApiError(
           413,
           "El espacio está lleno. Borrá algún archivo o ampliá el almacenamiento.",
         );
       const id = uploadId,
-        filename = id + "." + detected.ext;
+        filename = remote && detected.kind === "video" && req.file.size > 50_000_000
+          ? videoDescriptor(id + "." + detected.ext, req.file.size)
+          : id + "." + detected.ext;
+      pendingId = id;
+      pendingFilename = filename;
+      if (filename.includes(".parts-v1-")) {
+        if (!await journals!.reserve(id, filename)) throw new ApiError(409, "Esta subida todavía se está guardando. Intentá nuevamente en unos minutos.");
+        reservedId = id;
+      }
       if (detected.kind === "photo") {
         thumb = join(mediaDir, id + ".thumb.webp");
         try {
@@ -503,7 +522,7 @@ export async function createApp(options: AppOptions) {
       }
       const storedBytes =
         req.file.size + (remote && thumb ? statSync(thumb).size : 0);
-      if ((await used()) + storedBytes > maxStorage)
+      if ((await used(reservedId)) + storedBytes > maxStorage)
         throw new ApiError(413, "El espacio está lleno.");
       if (options.objectStorage) {
         uploadedKeys.push(filename);
@@ -520,6 +539,7 @@ export async function createApp(options: AppOptions) {
         target = join(mediaDir, filename);
         renameSync(tempPath, target);
       }
+      insertAttempted = true;
       await db
         .prepare(
           "INSERT INTO media (id,kind,filename,mime,size,title,date,album,tags,artist,createdAt,storedBytes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -539,6 +559,7 @@ export async function createApp(options: AppOptions) {
           storedBytes,
         );
       committed = true;
+      if (reservedId) await journals!.forget(reservedId).catch(() => console.error("Reserva confirmada pendiente de limpieza."));
       target = "";
       if (!remote) thumb = ""; // local originals and thumbnails are persistent
       res
@@ -552,15 +573,28 @@ export async function createApp(options: AppOptions) {
         );
     } finally {
       try {
+        if (!committed && insertAttempted && options.objectStorage) {
+          // A lost database response can still mean the original was committed.
+          // Keep its objects until the confirmation can be checked safely.
+          try {
+            const confirmed = await db.prepare("SELECT filename FROM media WHERE id=?").get(pendingId) as { filename: string } | undefined;
+            committed = confirmed?.filename === pendingFilename;
+          } catch {
+            committed = true;
+            console.error("Confirmación de subida pendiente; se conservan sus archivos.");
+          }
+        }
         if (!committed && options.objectStorage && uploadedKeys.length) {
           try {
             await options.objectStorage.remove(uploadedKeys);
+            if (reservedId) await journals!.forget(reservedId);
           } catch {
             console.error(
               "No se pudieron limpiar objetos de una subida fallida; revisar huérfanos en Storage.",
             );
           }
         }
+        if (!committed && reservedId && !uploadedKeys.length) await journals!.forget(reservedId);
         for (const path of [tempPath, target, thumb])
           if (path && existsSync(path)) unlinkSync(path);
       } finally {

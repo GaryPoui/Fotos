@@ -18,6 +18,8 @@ import {
 import type { Library, Media, Note, Settings } from "../shared/types";
 import { api, bytes, today } from "./lib";
 import { PendingUploads } from "./components/PendingUploads";
+import { StorageSummary } from "./components/StorageSummary";
+import { availableBytes } from "../shared/storage";
 import { MemoryHome } from "./components/MemoryHome";
 import { Gallery } from "./components/Gallery";
 import { UploadDialog } from "./components/UploadDialog";
@@ -225,6 +227,7 @@ export default function App() {
           </div>
         ) : (
           <>
+            <StorageSummary storage={library.storage} />
             <PendingUploads
               revision={uploadType || "closed"}
               onResume={setUploadType}
@@ -364,7 +367,7 @@ export default function App() {
                   : "Hecho de pequeños momentos, guardado con amor."}
               </span>
               <small>
-                {bytes(library.storage.used)} de {bytes(library.storage.limit)}
+                {bytes(availableBytes(library.storage))} disponibles · {bytes(library.storage.used)} de {bytes(library.storage.limit)}
               </small>
             </footer>
           </>
@@ -407,6 +410,8 @@ export default function App() {
           preferences={library.albums}
           type={uploadType}
           maxFile={library.storage.maxFile}
+          maxVideoFile={library.storage.maxVideoFile ?? library.storage.maxFile}
+          available={availableBytes(library.storage)}
           onClose={() => setUploadType(null)}
           onChanged={changed}
           albums={[

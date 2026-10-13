@@ -38,6 +38,7 @@ const runtime = await createApp({
     process.env.APP_ORIGIN || process.env.RENDER_EXTERNAL_URL || undefined,
   trustProxy: Number(process.env.TRUST_PROXY || 0),
   maxFileBytes: remote ? 50_000_000 : mb("MAX_FILE_MB", 200),
+  maxVideoFileBytes: remote ? 50_000_000 : mb("MAX_FILE_MB", 200),
   maxStorageBytes: remote ? 900_000_000 : mb("MAX_STORAGE_MB", 1024),
   databaseUrl: process.env.DATABASE_URL,
   databaseCa: process.env.DATABASE_CA,
@@ -54,6 +55,7 @@ const port = Number(process.env.PORT || 3001);
 const server = runtime.app.listen(port, "0.0.0.0", () =>
   console.log("Nuestro rincón: servidor listo en puerto " + port),
 );
+server.requestTimeout = 15 * 60 * 1000;
 for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () =>
     server.close(async () => {
