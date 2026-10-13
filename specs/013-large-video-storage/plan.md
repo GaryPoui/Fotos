@@ -1,0 +1,16 @@
+# Implementation Plan: Videos grandes y espacio disponible
+**Branch**: main | **Date**: 2026-10-13 | **Spec**: [spec.md](spec.md)
+## Summary
+Videos nuevos >50M se conservan sin transformación en partes de10.000.000 bytes privadas. Descriptor versionado en NUEVO media.filename permite reconstrucción/Range, sin tocar filas/objetos históricos. 200MiB por video; otros archivos50M; presupuesto900M incluyendo thumbnails y reservas. Indicador visible y formulario con máximos por tipo.
+## Technical Context
+React19/TypeScript/Express5/Node24, SQLite/PGlite/PostgreSQL actuales. Blob.slice de archivo staging, fetch/asyncgenerator/pipeline con backpressure y abort. Partes con UUID derivadoSHA256, nombres.mp4/webm admitidos por bridge existente. Hasta21 partes; DELETE en tandas20. Ningún DDL, nueva cuenta, permiso, bucket ni secreto. Multipart original al servidor; timeout15min para video grande y requestTimeout15min; no reanudación de red ni transcodificación.
+## Constitution Check
+PASS antes/después: privacidad sesión+CSRF+bucketprivado; originales idénticos; persistencia real; spec antes de código; bytehash/rangos/persistencia/fallos + navegador; mobile360/controles44/colores actuales; gratis. Datos personales/credenciales/backups fueraGit. No modificaciones de auth/RLS ni nuevas exposiciones.
+## Research
+Agente read-only requerido por skill plan consultó fuentes primarias:50MB objeto Free; bridge flujo110s/Edge150s, por eso10M para acotar cada llamada; RangeGET sólo, HEAD ignoraRange; validar206/Content-Range/tamaño exactos; cancelar fetch al desconectarse. research.md consolida decisiones, alternativas y links.
+## Structure
+server/video-parts.ts (descriptor/keys/rangos/journal), server/cloud-storage.ts (put/remove/serve), server/{app,index}.ts (límites/reservas/API), shared/{types,storage}.ts, src/{App,lib,styles}.tsx/css, src/components/{StorageSummary,UploadDialog}.tsx, tests/{segmented-storage,cloud}.test.ts y tests/e2e.spec.ts.
+## Preservation and recovery
+Descriptor UUID.ext.parts-v1-PARTBYTES-SIZE sólo en nuevas filas; size/storedBytes=bytes originales. ID/fields/API pública igual. No sidecar requerido para archivos confirmados. Journal meta video-upload:UUID con filename/ownerUUID/createdAt reserva tamaño completo; insertar media después de todas las partes. Limpieza fallida retiene reserva; startup sólo recupera journals sin media y antiguos>=1h, protege procesos activos/bluegreen. Journal con media confirmado se retira sin borrar objetos. Reintento de journal propio puede limpiarlo; otro owner reciente devuelve409. Quota excluye reserva propia y filas ya confirmadas; doble comprobación tras reservar impide sobreconsumo concurrente.
+## Delivery
+Snapshot privado209 archivos/3escritos/1lugar. Commit diseño; tests críticos antes del código; integrar/fallas/bytes/rangos/borrador/cuota; build/suites. Publicar primero lector compatible manteniendo límite50M (baseline seguro para volver atrás), luego habilitar200MiB. Verificar proveedor real con objetos sintéticos propios y controles explícitos de identidad/hash; retirar sólo esos artefactos. QA público sin editar contenido personal; comparación raw DB/esquema; prueba real de video >50M, reporte y commits/push por avance.

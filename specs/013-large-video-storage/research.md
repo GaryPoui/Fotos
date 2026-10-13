@@ -1,0 +1,10 @@
+# Research — 2026-10-13
+Agente de investigación despachado explícitamente por speckit-plan; sólo lectura, sin acceso a credenciales/contenido personal.
+## Decision: partes privadas
+50MB máximo por objeto Free; se almacenan partes10M, sin cambiar límites del proveedor. Mismo bucket/bridge UUID.mp4/webm, tokens sólo servidor. Descriptor validado en filename nuevo y nombresSHA256 con separación de dominio+UUID+tamaño+índice. Lector antiguo intacto para filenames regulares. Original idéntico, sin transcode. Alternatives: pagar plan, compresión destructiva, cuentas nuevas, TUS directo con mayor acceso descartados por preferencias/privacidad. [Supabase límites](https://supabase.com/docs/guides/storage/uploads/file-limits), [Storage incluido](https://supabase.com/docs/guides/storage/pricing), [Edge límites](https://supabase.com/docs/guides/functions/limits).
+## Decision: stream seguro
+GET completo o un intervalo cerrado/abierto/sufijo; múltiples rangos se ignoran200. HEAD200 ignoraRange. Mapear índices y offsets, validar206/Content-Range/Content-Length y bytes recibidos; nunca concatener200 que ignoró rango parcial. Primera respuesta válida antes de headers; fallo posterior destruye stream, noJSON falso. Pipeline único+backpressure+abort al cierre. [RFC9110 rangos](https://www.rfc-editor.org/rfc/rfc9110.html#name-range-requests), [Node streams](https://nodejs.org/api/stream.html).
+## Decision: cuota/reservas
+Disponible del sitio=900M menos archivos+thumbnails+reservas conocidas. No es medición global exacta del proveedor. Journal persiste ante caída, cleanup de partes intentadas/incluida respuesta perdida. Recuperación diferida1h evita borrar activo durante despliegue; media confirmado siempre protegido. Bytes de partes suman exactamenteoriginal sin metadataobj extra. Presupuesto conserva margen100M.
+## Supabase
+Skill/changelog/docs actuales revisados. Deprecación CBC HTTP futura no afecta pg/pooler y Node moderno usaTLS actual; no roles/RLS/auth/exposición/schema/bucket alterados. [Changelog](https://supabase.com/changelog/cbc-tls-ciphers-deprecated), [PG conexión](https://supabase.com/docs/guides/database/connecting-to-postgres).
