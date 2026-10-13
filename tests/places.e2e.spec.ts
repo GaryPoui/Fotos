@@ -121,15 +121,21 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
     await page.getByRole("button", { name: "Mapa", exact: true }).click();
     await expect(page.locator(".place-marker")).toHaveCount(2);
     await page
-      .locator(".place-marker")
-      .filter({ has: page.locator(".place-pin") })
-      .first()
+      .getByRole("button", {
+        name: "Ver lugar: " + title + " · Cafés",
+        exact: true,
+      })
       .hover();
     const label = page.locator(".leaflet-tooltip:visible");
     await expect(label).toBeVisible();
     const labelBox = await label.boundingBox();
     expect(labelBox!.width).toBeGreaterThan(100);
     expect(labelBox!.height).toBeLessThan(110);
+    const mapBox = await page.locator(".places-canvas").boundingBox();
+    expect(labelBox!.x).toBeGreaterThanOrEqual(mapBox!.x + 6);
+    expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(
+      mapBox!.x + mapBox!.width - 6,
+    );
     const filters = page.getByRole("group", {
       name: "Filtrar lugares por categoría",
     });

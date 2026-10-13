@@ -2492,6 +2492,7 @@ input[type="range"] {
 .places-canvas .leaflet-control-zoom { border: 1px solid #dce7ee; border-radius: 16px; box-shadow: 0 4px 15px #36586d12; overflow: hidden; }
 .places-canvas .leaflet-control-zoom a { background: #ffffffed; color: var(--ink); font-size: 22px; font-weight: 400; border-color: #e7eef3; }
 .places-canvas .leaflet-tooltip { border-radius: 12px; padding: 8px 12px; border: 1px solid #dce7ee; box-shadow: 0 4px 15px #36586d12; color: var(--ink); width: max-content; max-width: min(230px, calc(100vw - 96px)); white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.5; }
+.places-canvas .leaflet-tooltip-top::before { left: var(--place-tooltip-anchor, 50%); }
 .places-canvas .leaflet-control-attribution { font-size: 10px; max-width: 100%; }
 .place-marker { background: transparent; border: 0; }
 .place-pin { position: relative; width: 38px; height: 38px; display: grid; place-items: center; margin: 3px; border: 3px solid white; border-radius: 50%; background: currentColor; box-shadow: 0 4px 12px #29425340; }

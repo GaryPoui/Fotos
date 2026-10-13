@@ -130,7 +130,26 @@ export function PlaceCanvas({
       }).addTo(layer.current);
       const tooltip = document.createElement("span");
       tooltip.textContent = place.name + " · " + category.label;
-      marker.bindTooltip(tooltip);
+      marker.bindTooltip(tooltip, { direction: "top", offset: [0, -42] });
+      marker.on("tooltipopen", () => {
+        const tip = marker.getTooltip();
+        const label = tip?.getElement();
+        const instance = map.current;
+        if (!tip || !label || !instance) return;
+        const x = instance.latLngToContainerPoint(marker.getLatLng()).x;
+        const width = label.offsetWidth;
+        const left = Math.max(
+          10,
+          Math.min(x - width / 2, instance.getSize().x - width - 10),
+        );
+        const shift = left - (x - width / 2);
+        tip.options.offset = L.point(shift, -42);
+        label.style.setProperty(
+          "--place-tooltip-anchor",
+          width / 2 - shift + "px",
+        );
+        tip.update();
+      });
       const markerElement = marker.getElement();
       markerElement?.setAttribute(
         "aria-label",

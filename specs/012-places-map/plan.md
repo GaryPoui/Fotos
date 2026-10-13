@@ -15,6 +15,7 @@ Cliente: debounce 650 ms sólo para enlaces HTTPS de Maps, una resolución por t
 
 ## Corrección 2026-10-13
 Tooltip Leaflet con width:max-content y máximo responsive para evitar shrink-to-fit de su panel absoluto; texto seguro, líneas horizontales y comprobación real de ancho. Buscar sólo con URL: parseMapsUrl valida antes de resolver en API y resolver; se conserva geocodificación interna del nombre extraído del enlace. Etiqueta y ayuda sólo Google Maps, invalidación local sin red para texto libre. Corregir el pin requiere candidato, nunca sustituye el enlace como origen de un lugar nuevo. Sin migraciones ni cambios de datos.
+Etiqueta sobre el pin, desplazada horizontalmente sólo lo necesario para permanecer dentro del mapa, con flecha anclada al marcador; comprobar también sus límites en móvil para evitar recortes.
 
 ## Delivery
 Registrar diseño y tareas; snapshot DB/library privado fresco; tests críticos de servicio/API; código; build y suites; commit/push, CI, Render y QA público sintético con guardados interceptados; comparar datos históricos. Documentar límites de links opacos y servicios sin SLA. No modificar lugares o recuerdos reales para probar.
