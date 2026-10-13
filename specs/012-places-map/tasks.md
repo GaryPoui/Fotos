@@ -24,6 +24,11 @@
 - [x] T016 Pulir mapa, controles y marcadores en src/components/{PlacesMap,PlaceCanvas}.tsx y src/styles.css; mantener tiles OSM, accesibilidad y atribución; revisión visual móvil/PC.
 - [x] T017 Build y suites, commit/push/CI, publicar Render, verificar URL real pública y UI sintética, comparar todos los datos históricos y documentar evidencia.
 
+## Corrección 2026-10-13
+- [x] T018 Registrar requisito URL-only/tooltip, snapshot privado fresco en backups/pre-map-url-only-2026-10-13/ y commit/push de especificación.
+- [ ] T019 Ajustar integración/navegador para URL-only, rechazo de texto sin proveedor y nombre horizontal; corregir resolver/API, formulario y tooltip en server/{app,places}.ts, src/components/PlacesMap.tsx y src/styles.css.
+- [ ] T020 Build/suites, commit/push/CI, publicar Render, comprobar formulario y tooltip en móvil/PC sin escribir datos personales, comparar históricos y registrar evidencia.
+
 ## Dependencies
 T001→T002→T003/T004/T005→T006→T007→T008/T009→T010/T011→T012→T013. US2 requiere lugares de US1; US3 mapa de US2.
 ## Parallel opportunities

@@ -8,3 +8,5 @@ All endpoints use current session; mutations and resolution require X-Requested-
 UI: Mapa tab, Mi ubicación, Ver todos, Agregar lugar, seven category filters; map+list in sync, safe DOM labels, editor inline with candidate choice/manual point, name/category/note fields, save/cancel, clear failure feedback, selected place edit/remove/Maps link.
 
 URL follow-up: resolve enriches exact coordinate links through bounded reverse geocoding without moving their coordinates. Candidate gains optional addressApproximate flag for a nearby suggested address. Missing/failed reverse returns original point with blank address (never coordinate text posing as street). A single Maps URL result prefills the UI automatically, while multiple results still require a choice. No persistence before explicit Save. Existing Place schema remains unchanged.
+
+2026-10-13: POST /api/places/resolve accepts only an allowlisted Google Maps place URL. Plain addresses/coordinates return400 before calling resolver/provider. URL-derived place-name search remains internal. UI says Enlace de Google Maps; draft address remains editable, but is not a search field.

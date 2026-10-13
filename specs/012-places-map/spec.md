@@ -54,6 +54,7 @@ Toco Mi ubicación y permito el acceso para ver mi posición actual en el mapa.
 - **FR-011**: Fallos de búsqueda, ubicación o mapa MUST mostrar explicación recuperable; no bloquear los lugares existentes.
 - **FR-012**: Pegar un enlace de Maps MUST iniciar una única resolución tras una pausa breve; si identifica un único lugar, completar nombre, dirección disponible y punto sin otro clic. Borrador revisable, nunca guardado automático. Resultados ambiguos requieren elegir; una dirección aproximada o ausente se informa. Cambiar consulta, corregir campos, cerrar o tocar el mapa descarta respuestas anteriores.
 - **FR-013**: Mapa MUST presentar una superficie clara, controles integrados, marcadores legibles y filtros cómodos en móvil y PC, con la atribución visible. El rediseño no cambia el proveedor ni requiere cuentas, claves o pagos.
+- **FR-014** (2026-10-13, reemplaza búsqueda por dirección de FR-003): La búsqueda MUST aceptar sólo enlaces de un lugar de Google Maps e indicarlo en etiqueta, ayuda y errores; direcciones escritas MUST rechazarse sin consultar al proveedor. El nombre sobre el marcador MUST leerse horizontalmente y envolver palabras largas sin reducirse a una columna de letras. Corrección manual del punto de un lugar ya identificado permanece disponible. Datos anteriores intactos.
 ### Key Entities
 - **Lugar**: Punto compartido con identidad estable, nombre, dirección, categoría, nota y fecha de creación.
 - **Resultado de búsqueda**: Candidato temporal pendiente de confirmar.
