@@ -133,6 +133,10 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
     expect(labelBox!.height).toBeLessThan(110);
     const mapBox = await page.locator(".places-canvas").boundingBox();
     expect(labelBox!.x).toBeGreaterThanOrEqual(mapBox!.x + 6);
+    expect(labelBox!.y).toBeGreaterThanOrEqual(mapBox!.y + 6);
+    expect(labelBox!.y + labelBox!.height).toBeLessThanOrEqual(
+      mapBox!.y + mapBox!.height - 6,
+    );
     expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(
       mapBox!.x + mapBox!.width - 6,
     );

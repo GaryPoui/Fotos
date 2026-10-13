@@ -136,14 +136,20 @@ export function PlaceCanvas({
         const label = tip?.getElement();
         const instance = map.current;
         if (!tip || !label || !instance) return;
-        const x = instance.latLngToContainerPoint(marker.getLatLng()).x;
+        const point = instance.latLngToContainerPoint(marker.getLatLng());
+        const x = point.x;
         const width = label.offsetWidth;
         const left = Math.max(
           10,
           Math.min(x - width / 2, instance.getSize().x - width - 10),
         );
         const shift = left - (x - width / 2);
-        tip.options.offset = L.point(shift, -42);
+        tip.options.direction =
+          point.y - label.offsetHeight - 42 >= 10 ? "top" : "bottom";
+        tip.options.offset = L.point(
+          shift,
+          tip.options.direction === "top" ? -42 : 12,
+        );
         label.style.setProperty(
           "--place-tooltip-anchor",
           width / 2 - shift + "px",
