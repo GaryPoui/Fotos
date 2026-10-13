@@ -13,8 +13,8 @@
 - [x] T008 [US2] Verificar browser360/390/1440, límite por tipo, espacio/errores/actualización y demás recorridos en tests/e2e.spec.ts, build y suites completas.
 ## Phase 5 Delivery
 - [x] T009 Commit/push/CI y publicar lector compatible en Render todavía50M; guardar baseline para rollback seguro; probar proveedor real con artefactos sintéticos propios verificando bytes y retirada exacta.
-- [ ] T010 Habilitar200MiB en server/index.ts, commit/push/checks y publicar Render; QA público/capacidad/video>50M conservando contenido personal.
-- [ ] T011 Comparar históricos/schema/espacio tras limpiar sólo pruebas propias; evidencia/screenshots en verification.md, marcar tareas y commit/push final.
+- [x] T010 Habilitar200MiB en server/index.ts, commit/push/checks y publicar Render; QA público/capacidad/video>50M conservando contenido personal.
+- [x] T011 Comparar históricos/schema/espacio tras limpiar sólo pruebas propias; evidencia/screenshots en verification.md, marcar tareas y commit/push final.
 ## Dependencies
 T001→T002→T003→T004→T005→T006→T007→T008→T009→T010→T011. US2 usa reservas de US1; flags sólo después del lector validado.
 ## Parallel opportunities

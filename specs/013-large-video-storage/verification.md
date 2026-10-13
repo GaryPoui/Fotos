@@ -20,4 +20,12 @@ El indicador contabiliza archivos registrados, miniaturas y reservas conocidas d
 
 Lector compatible: commit `b6fc93a`, tag remoto `video-reader-baseline-2026-10-13`. GitHub Actions `38484742666`: success, incluidas pruebas, build, navegador y recreación del contenedor con volumen persistente. Render `dep-db7c0pm7bikc73aacut0`: Live el 2026-10-13 a las 20:36 ART. API pública privada verificada con límites anteriores y nuevo espacio disponible; históricos/schema intactos después de publicar.
 
-Pendiente registrar activación de 200 MiB y verificación pública final.
+Activación: commit `b82c221`. GitHub Actions `38485436601`: success, incluidas pruebas, build, navegador y persistencia del contenedor. Render `dep-db7c42favr4c73fled60`: Live el 2026-10-13 a las 20:43 ART. API pública: `maxVideoFile=209715200`, `maxFile=50000000`, `available=654777090`, `reserved=0`.
+
+Prueba real a través de Render: POST del MP4 sintético de 55000001 bytes aprobado; descarga SHA idéntica, rangos entre partes y reproducción Chromium aprobados; aumento de uso exactamente igual al tamaño original. Se retiró únicamente ese nuevo UUID, verificando título/tipo/tamaño antes de borrarlo. Library volvió a coincidir exactamente con el estado anterior, incluyendo archivos, escritos, álbumes, lugares y ajustes. Ninguna reserva pendiente ni video de prueba quedó registrado.
+
+Comparación SQL final: todas las filas históricas y el esquema siguen intactos (209 archivos, 3 escritos y 1 lugar). Espacio final: 245222910 bytes usados de 900000000; 654777090 disponibles (624.4 MB en la interfaz).
+
+Interfaz pública verificada en 360, 390 y 1440 px, sin desbordes, con límites por tipo y espacio disponible visibles. Para las capturas se mostró una biblioteca vacía sintética, manteniendo las cifras y la interfaz reales del sitio, evitando exponer imágenes/cartas personales. Evidencia local privada: `test-results/render-storage-{360,390,1440}.png`, `test-results/render-video-upload-{360,390,1440}.png`; copia de la captura móvil junto al snapshot privado. Resultados técnicos y snapshots no se subieron al repo.
+
+Protección adicional comprobada: si PostgreSQL confirma el INSERT pero se pierde su respuesta, la limpieza consulta esa confirmación y conserva el original. El reintento con el mismo identificador devuelve el registro ya guardado; el reinicio limpia sólo su reserva. No existe migración ni reescritura de datos anteriores.
