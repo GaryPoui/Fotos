@@ -135,6 +135,12 @@ export default function PlacesMap({
     view("candidate");
   };
   const resolveQuery = async (text: string) => {
+    if (!isMapsLink(text)) {
+      setError(
+        "Pegá un enlace de un lugar de Google Maps. No se buscan direcciones escritas.",
+      );
+      return;
+    }
     lastAttempt.current = text;
     const generation = ++searchGeneration.current;
     const revision = { ...fieldRevision.current };
@@ -157,7 +163,7 @@ export default function PlacesMap({
       setSearchMessage(
         response.results.length
           ? "Elegí el resultado que corresponde y revisá el punto."
-          : "No encontramos resultados. Probá con calle, número y ciudad, o elegí el punto tocando el mapa.",
+          : "No encontramos ese lugar. Abrilo en Google Maps y copiá el enlace desde Compartir para volver a intentar.",
       );
     } catch (error) {
       if (mounted.current && generation === searchGeneration.current)
@@ -332,7 +338,7 @@ export default function PlacesMap({
         candidate={candidate}
         position={position}
         viewRequest={viewRequest}
-        picking={!!editing && !busy}
+        picking={!!editing && !!candidate && !busy}
         onPick={(lat, lng) => {
           searchGeneration.current++;
           lastAttempt.current = query.trim();
@@ -409,9 +415,7 @@ export default function PlacesMap({
             </button>
           </div>
           <form onSubmit={search} className="place-search">
-            <label htmlFor="place-search">
-              Dirección o enlace de Google Maps
-            </label>
+            <label htmlFor="place-search">Enlace de Google Maps</label>
             <div>
               <input
                 id="place-search"
@@ -425,7 +429,8 @@ export default function PlacesMap({
                   setSearchMessage("");
                   setQuery(event.target.value);
                 }}
-                placeholder="Calle, número y ciudad, o enlace de Maps"
+                type="url"
+                placeholder="https://maps.app.goo.gl/…"
                 minLength={3}
                 maxLength={2048}
                 required
@@ -437,13 +442,13 @@ export default function PlacesMap({
                 ) : (
                   <Search size={18} />
                 )}{" "}
-                Buscar
+                Cargar enlace
               </button>
             </div>
             <small>
-              Pegá un enlace y completamos los datos automáticamente. Para una
-              dirección, tocá Buscar. También podés elegir el punto en el mapa.
-              Búsqueda: Photon.
+              Sólo enlaces de lugares de Google Maps. Abrí el lugar, tocá
+              Compartir y copiá el enlace. Al pegarlo completamos los datos
+              automáticamente; no se buscan direcciones escritas.
             </small>
           </form>
           {searchMessage && (
@@ -474,7 +479,9 @@ export default function PlacesMap({
             </ul>
           )}
           <p className="map-pick-hint">
-            Tocá el mapa para elegir o ajustar el punto.
+            {candidate
+              ? "Tocá el mapa para ajustar el punto del lugar."
+              : "Pegá el enlace de Google Maps para ubicar el lugar."}
           </p>
           {canvas}
           <form onSubmit={save} className="place-fields">
@@ -537,7 +544,7 @@ export default function PlacesMap({
                   candidate.lat.toFixed(5) +
                   ", " +
                   candidate.lng.toFixed(5)
-                : "Falta elegir un resultado o tocar el mapa para marcar el lugar."}
+                : "Falta cargar el enlace de un lugar de Google Maps."}
             </p>
             <div className="place-wide place-actions">
               <button

@@ -36,7 +36,7 @@ export class PlaceLookupError extends Error {
 const invalidLink = () =>
   new PlaceLookupError(
     400,
-    "Pegá un enlace de un lugar de Google Maps, o buscá su dirección.",
+    "Pegá un enlace de un lugar de Google Maps. No se buscan direcciones escritas.",
   );
 const googleHosts = new Set([
   "google.com",
@@ -139,7 +139,7 @@ export function parseMapsUrl(value: string): {
   }
   throw new PlaceLookupError(
     400,
-    "El enlace no muestra un punto o dirección. Pegá la dirección o elegí el lugar tocando el mapa.",
+    "El enlace no muestra una ubicación. Abrí el lugar en Google Maps y copiá su enlace desde Compartir.",
   );
 }
 
@@ -251,10 +251,7 @@ export function createPlaceResolver(
     };
     const lookup = async () => {
       let query = input;
-      let parsed: ReturnType<typeof parseMapsUrl> | undefined;
-      if (/^[a-z][a-z\d+.-]*:/i.test(input) || input.startsWith("//"))
-        parsed = parseMapsUrl(input);
-      else if (/^(?:www\.|maps\.)\S/i.test(input)) throw invalidLink();
+      let parsed = parseMapsUrl(input);
       if (now() < nextRequest)
         throw new PlaceLookupError(
           429,
@@ -283,9 +280,6 @@ export function createPlaceResolver(
         }
       }
       query = parsed?.query || query;
-      const direct = coordinatePair(query);
-      if (direct)
-        return enrich({ ...direct, name: "Lugar en el mapa", address: "" });
       const endpoint = new URL(
         options.endpoint ||
           process.env.PLACES_SEARCH_URL ||
@@ -307,7 +301,7 @@ export function createPlaceResolver(
       if (!response.ok)
         throw new PlaceLookupError(
           502,
-          "No pudimos buscar la dirección. Reintentá o elegí el punto tocando el mapa.",
+          "No pudimos ubicar ese enlace. Volvé a intentar con el enlace del lugar en Google Maps.",
         );
       const json = (await response.json()) as {
         features?: {
@@ -352,7 +346,7 @@ export function createPlaceResolver(
         if (error instanceof PlaceLookupError) throw error;
         throw new PlaceLookupError(
           502,
-          "La búsqueda no está disponible. Volvé a intentar o elegí el punto en el mapa.",
+          "No pudimos cargar el enlace. Volvé a intentar en unos momentos.",
         );
       });
     if (cache.size >= 256) cache.delete(cache.keys().next().value!);

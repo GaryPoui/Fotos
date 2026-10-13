@@ -26,7 +26,7 @@
 
 ## Corrección 2026-10-13
 - [x] T018 Registrar requisito URL-only/tooltip, snapshot privado fresco en backups/pre-map-url-only-2026-10-13/ y commit/push de especificación.
-- [ ] T019 Ajustar integración/navegador para URL-only, rechazo de texto sin proveedor y nombre horizontal; corregir resolver/API, formulario y tooltip en server/{app,places}.ts, src/components/PlacesMap.tsx y src/styles.css.
+- [x] T019 Ajustar integración/navegador para URL-only, rechazo de texto sin proveedor y nombre horizontal; corregir resolver/API, formulario y tooltip en server/{app,places}.ts, src/components/PlacesMap.tsx y src/styles.css.
 - [ ] T020 Build/suites, commit/push/CI, publicar Render, comprobar formulario y tooltip en móvil/PC sin escribir datos personales, comparar históricos y registrar evidencia.
 
 ## Dependencies

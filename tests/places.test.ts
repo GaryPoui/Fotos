@@ -108,7 +108,15 @@ it("searches Photon GeoJSON explicitly with bounded cache, throttles and handles
     fetcher: fetcher as typeof fetch,
     now: () => now,
   });
-  expect(await resolve("Corrientes 100 Buenos Aires")).toMatchObject([
+  await expect(resolve("Corrientes 100 Buenos Aires")).rejects.toMatchObject({
+    status: 400,
+  });
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(
+    await resolve(
+      "https://www.google.com/maps/search/?query=Corrientes+100+Buenos+Aires",
+    ),
+  ).toMatchObject([
     {
       name: "Café",
       address: expect.stringContaining("Corrientes"),
@@ -116,24 +124,28 @@ it("searches Photon GeoJSON explicitly with bounded cache, throttles and handles
       lng: -58.4,
     },
   ]);
-  await resolve("Corrientes 100 Buenos Aires");
+  await resolve(
+    "https://www.google.com/maps/search/?query=Corrientes+100+Buenos+Aires",
+  );
   expect(fetcher).toHaveBeenCalledTimes(1);
-  await expect(resolve("Otro lugar público")).rejects.toMatchObject({
+  await expect(
+    resolve("https://www.google.com/maps/place/Otro+Lugar"),
+  ).rejects.toMatchObject({
     status: 429,
   });
   now += 1100;
-  await resolve("Otro lugar público");
+  await resolve("https://www.google.com/maps/place/Otro+Lugar");
   expect(fetcher).toHaveBeenCalledTimes(2);
   await expect(
     createPlaceResolver({
       fetcher: (async () =>
         new Response("failure", { status: 503 })) as typeof fetch,
-    })("Obelisco Buenos Aires"),
+    })("https://www.google.com/maps/place/Obelisco+Buenos+Aires"),
   ).rejects.toMatchObject({ status: 502 });
   expect(
     await createPlaceResolver({
       fetcher: (async () => Response.json({ features: [] })) as typeof fetch,
-    })("Lugar inexistente"),
+    })("https://www.google.com/maps/place/Lugar+inexistente"),
   ).toEqual([]);
 });
 
@@ -282,6 +294,12 @@ it("stores places privately across restart without rewriting historical content"
       .post("/api/places/resolve")
       .set(headers)
       .send({ query: "Plaza" })
+      .expect(400);
+    expect(lookup).not.toHaveBeenCalled();
+    await agent
+      .post("/api/places/resolve")
+      .set(headers)
+      .send({ query: "https://www.google.com/maps/place/Plaza" })
       .expect(200);
     runtime.close();
     runtime = await createApp({

@@ -42,7 +42,7 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
   if (info.project.name === "mobile")
     await page.setViewportSize({ width: 360, height: 900 });
   const before = await (await page.request.get("/api/library")).json();
-  const title = "Café de ejemplo " + info.project.name;
+  const title = "Maleza Café & Beer — ejemplo " + info.project.name;
   let ids: string[] = [];
   try {
     await page.route("**/api/places/resolve", (route) =>
@@ -64,7 +64,7 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
       .getByRole("button", { name: "Agregar lugar", exact: true })
       .click();
     await page
-      .getByLabel("Dirección o enlace de Google Maps")
+      .getByLabel("Enlace de Google Maps")
       .fill(
         "https://www.google.com/maps/search/?api=1&query=-34.6037,-58.3816",
       );
@@ -120,6 +120,16 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
     await page.reload();
     await page.getByRole("button", { name: "Mapa", exact: true }).click();
     await expect(page.locator(".place-marker")).toHaveCount(2);
+    await page
+      .locator(".place-marker")
+      .filter({ has: page.locator(".place-pin") })
+      .first()
+      .hover();
+    const label = page.locator(".leaflet-tooltip:visible");
+    await expect(label).toBeVisible();
+    const labelBox = await label.boundingBox();
+    expect(labelBox!.width).toBeGreaterThan(100);
+    expect(labelBox!.height).toBeLessThan(110);
     const filters = page.getByRole("group", {
       name: "Filtrar lugares por categoría",
     });
@@ -242,7 +252,7 @@ test("Maps links fill the draft automatically, preserve corrections and discard 
   await page
     .getByRole("button", { name: "Agregar lugar", exact: true })
     .click();
-  const query = page.getByLabel("Dirección o enlace de Google Maps");
+  const query = page.getByLabel("Enlace de Google Maps");
   await query.fill("https://maps.app.goo.gl/first");
   await expect.poll(() => queries.length).toBe(1);
   await query.fill("https://maps.app.goo.gl/second");
@@ -284,7 +294,7 @@ test("Maps links fill the draft automatically, preserve corrections and discard 
   ).toEqual(before);
 });
 
-test("map searches candidates, allows manual pin, and location is temporary with permission only on request", async ({
+test("map accepts only Maps URLs, permits pin correction, and location is temporary with permission only on request", async ({
   page,
   context,
 }) => {
@@ -329,6 +339,12 @@ test("map searches candidates, allows manual pin, and location is temporary with
             lat: -34.603,
             lng: -58.38,
           },
+          {
+            name: "Otro resultado",
+            address: "Buenos Aires",
+            lat: -34.61,
+            lng: -58.39,
+          },
         ],
       },
     });
@@ -337,10 +353,27 @@ test("map searches candidates, allows manual pin, and location is temporary with
     .getByRole("button", { name: "Agregar lugar", exact: true })
     .click();
   await page
-    .getByLabel("Dirección o enlace de Google Maps")
+    .getByLabel("Enlace de Google Maps")
     .fill("Corrientes100 Buenos Aires");
   expect(calls).toBe(0);
-  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Cargar enlace", exact: true })
+    .click();
+  expect(calls).toBe(0);
+  await expect(page.locator("#place-search:invalid")).toHaveCount(1);
+  await page
+    .getByLabel("Enlace de Google Maps")
+    .fill("https://example.com/not-maps");
+  await page
+    .getByRole("button", { name: "Cargar enlace", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "No se buscan direcciones escritas",
+  );
+  expect(calls).toBe(0);
+  await page
+    .getByLabel("Enlace de Google Maps")
+    .fill("https://www.google.com/maps/place/Cafe+de+ejemplo");
   await page
     .getByRole("button", { name: /Café de ejemplo Corrientes/ })
     .click();
@@ -371,14 +404,13 @@ test("map searches candidates, allows manual pin, and location is temporary with
     .getByRole("button", { name: "Agregar lugar", exact: true })
     .click();
   await page
-    .getByLabel("Dirección o enlace de Google Maps")
-    .fill("Una dirección sin resultados");
+    .getByLabel("Enlace de Google Maps")
+    .fill("https://www.google.com/maps/place/Sin+resultados");
   await page.route("**/api/places/resolve", (route) =>
     route.fulfill({ json: { results: [] } }),
   );
-  await page.getByRole("button", { name: "Buscar", exact: true }).click();
   await expect(page.locator(".place-editor")).toContainText(
-    "No encontramos resultados",
+    "No encontramos ese lugar",
   );
   await page.route("**/api/places/resolve", (route) =>
     route.fulfill({
@@ -386,12 +418,14 @@ test("map searches candidates, allows manual pin, and location is temporary with
       json: { error: "Búsqueda temporalmente no disponible" },
     }),
   );
-  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Cargar enlace", exact: true })
+    .click();
   await expect(page.getByRole("alert")).toContainText(
     "temporalmente no disponible",
   );
-  await expect(
-    page.getByLabel("Dirección o enlace de Google Maps"),
-  ).toHaveValue("Una dirección sin resultados");
+  await expect(page.getByLabel("Enlace de Google Maps")).toHaveValue(
+    "https://www.google.com/maps/place/Sin+resultados",
+  );
   await fits(page);
 });

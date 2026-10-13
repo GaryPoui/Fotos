@@ -6,11 +6,11 @@
 
 ## User Scenarios & Testing
 ### User Story 1 - Guardar nuestros lugares (Priority: P1)
-Entro a Mapa, busco una dirección o pego un enlace de Google Maps, confirmo el punto, doy un nombre y categoría y guardo.
+Entro a Mapa, pego un enlace de Google Maps, confirmo el punto y los datos completados, doy una categoría y guardo.
 **Why this priority**: Crear una historia compartida de salidas y próximos planes.
 **Independent Test**: Guardar un café y un restaurante; recargar y comprobar sus posiciones, nombres e íconos.
 **Acceptance Scenarios**:
-1. **Given** una dirección, **When** busco y elijo un resultado, **Then** puedo revisar el punto antes de guardarlo.
+1. **Given** un enlace de Maps, **When** lo pego y elijo un resultado si es ambiguo, **Then** puedo revisar el punto antes de guardarlo. Una dirección escrita se rechaza sin búsqueda.
 2. **Given** un enlace de un lugar de Google Maps largo o compartido corto, **When** lo busco, **Then** obtengo el punto o resultados para confirmar; si no se puede interpretar, explica cómo elegirlo manualmente.
 3. **Given** un punto, **When** guardo nombre y categoría, **Then** aparece en mapa y lista, y permanece al recargar.
 4. **Given** una conexión caída, **When** falla el guardado, **Then** el formulario permanece para reintentar.
@@ -33,7 +33,7 @@ Toco Mi ubicación y permito el acceso para ver mi posición actual en el mapa.
 2. **Given** permiso denegado o ubicación no disponible, **When** intento localizarme, **Then** explica el problema y puedo seguir buscando y guardando lugares.
 
 ### Edge Cases
-- Dirección ambigua: resultados a elegir; sin resultado: selección manual en mapa.
+- Enlace ambiguo: resultados a elegir; sin resultado: reintentar con Compartir desde la ficha del lugar.
 - Enlace inválido, acortado vencido, ruta con múltiples paradas o proveedor sin conexión: error útil, sin guardar una ubicación inventada.
 - Texto largo, caracteres especiales y notas: legibles sin desbordar; no se interpretan como instrucciones ni HTML.
 - Mapa base sin conexión: mantiene lista y formularios disponibles e informa el fallo.
@@ -43,7 +43,7 @@ Toco Mi ubicación y permito el acceso para ver mi posición actual en el mapa.
 ### Functional Requirements
 - **FR-001**: Navegación principal MUST incluir Mapa junto a Recuerdos, Música y Palabras, accesible a 360 px y PC.
 - **FR-002**: Mapa MUST permitir desplazamiento y zoom, mostrar lugares guardados y una lista alternativa accesible.
-- **FR-003**: Búsqueda MUST aceptar dirección o enlace de un lugar de Google Maps y exigir confirmación del resultado antes de guardar; MUST ofrecer selección manual del punto.
+- **FR-003**: Búsqueda MUST aceptar sólo enlaces de un lugar de Google Maps y exigir revisión del resultado antes de guardar; MUST permitir corregir el punto identificado.
 - **FR-004**: Lugares MUST contener nombre no vacío (máximo100), dirección (máximo400), coordenadas válidas, categoría y nota opcional (máximo1000).
 - **FR-005**: Categorías MUST incluir Cafés, Restaurantes, Shoppings, Lugares a visitar, Lugares importantes, Parques y paseos, Otros, cada una con ícono distinto y texto; filtro sincronizado en mapa/lista.
 - **FR-006**: Crear, editar y quitar lugares MUST persistir de forma privada; quitar exige confirmación. Cancelación/error MUST conservar lo guardado y el borrador.
@@ -70,6 +70,6 @@ Toco Mi ubicación y permito el acceso para ver mi posición actual en el mapa.
 
 ## Assumptions
 - Ubicación corresponde al dispositivo actual; no se rastrea ni comparte en vivo el celular de la otra persona.
-- Las direcciones se buscan al enviar la consulta; pegar un enlace de Maps inicia su resolución automáticamente. No hay autocompletado de direcciones. La nota y el nombre privado no se envían al buscador.
+- Sólo un enlace de Maps inicia la resolución, automáticamente al pegarlo o al tocar Cargar enlace. No hay búsqueda por direcciones escritas. La nota y el nombre privado no se envían al buscador.
 - No se incluyen navegación giro a giro, rutas, reseñas ni importación masiva. Un enlace que sólo contiene una identificación opaca puede requerir elegir entre resultados o marcar el punto.
 - Se reutilizan hosting gratuito, sesión y almacenamiento privados existentes. Se muestra atribución del mapa y buscador.

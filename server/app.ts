@@ -27,7 +27,7 @@ import type { ObjectStorage } from "./cloud-storage.js";
 import { inspectFile, thumbnail } from "./files.js";
 import type { Media, Note, Settings, AlbumCustomization, Place, PlaceCandidate } from "../shared/types.js";
 import { albumKey, albumTitle, albumNameKey } from "../shared/albums.js";
-import { placeInput, savedPlace, createPlaceResolver, PlaceLookupError } from "./places.js";
+import { placeInput, savedPlace, createPlaceResolver, PlaceLookupError, parseMapsUrl } from "./places.js";
 
 const hash = (value: string | Buffer) =>
   createHash("sha256").update(value).digest("hex");
@@ -361,7 +361,7 @@ export async function createApp(options: AppOptions) {
   const resolvePlace=options.placeResolver||createPlaceResolver({origin:options.origin});
   app.post("/api/places/resolve",async(req,res)=>{
     const {query}=z.object({query:z.string().trim().min(3).max(2048)}).strict().parse(req.body);
-    try{res.json({results:await resolvePlace(query)});}catch(error){
+    try{parseMapsUrl(query);res.json({results:await resolvePlace(query)});}catch(error){
       if(error instanceof PlaceLookupError)throw new ApiError(error.status,error.message);
       throw new ApiError(502,"No pudimos buscar ese lugar. Volvé a intentar.");
     }
