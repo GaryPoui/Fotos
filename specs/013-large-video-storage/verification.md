@@ -18,4 +18,6 @@ No volver a una versión anterior al lector de `parts-v1` después de guardar vi
 
 El indicador contabiliza archivos registrados, miniaturas y reservas conocidas dentro de la asignación del sitio; no es una medición de todos los buckets o proyectos de la cuenta del proveedor.
 
-Pendiente registrar commits, publicaciones y verificación pública final.
+Lector compatible: commit `b6fc93a`, tag remoto `video-reader-baseline-2026-10-13`. GitHub Actions `38484742666`: success, incluidas pruebas, build, navegador y recreación del contenedor con volumen persistente. Render `dep-db7c0pm7bikc73aacut0`: Live el 2026-10-13 a las 20:36 ART. API pública privada verificada con límites anteriores y nuevo espacio disponible; históricos/schema intactos después de publicar.
+
+Pendiente registrar activación de 200 MiB y verificación pública final.

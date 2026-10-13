@@ -12,7 +12,7 @@
 - [x] T007 [US2] Campos API compatibles en shared/types.ts y Library, indicador StorageSummary, props/validación y espacio en UploadDialog, integración App/styles, sin explicar implementación interna en flujos.
 - [x] T008 [US2] Verificar browser360/390/1440, límite por tipo, espacio/errores/actualización y demás recorridos en tests/e2e.spec.ts, build y suites completas.
 ## Phase 5 Delivery
-- [ ] T009 Commit/push/CI y publicar lector compatible en Render todavía50M; guardar baseline para rollback seguro; probar proveedor real con artefactos sintéticos propios verificando bytes y retirada exacta.
+- [x] T009 Commit/push/CI y publicar lector compatible en Render todavía50M; guardar baseline para rollback seguro; probar proveedor real con artefactos sintéticos propios verificando bytes y retirada exacta.
 - [ ] T010 Habilitar200MiB en server/index.ts, commit/push/checks y publicar Render; QA público/capacidad/video>50M conservando contenido personal.
 - [ ] T011 Comparar históricos/schema/espacio tras limpiar sólo pruebas propias; evidencia/screenshots en verification.md, marcar tareas y commit/push final.
 ## Dependencies

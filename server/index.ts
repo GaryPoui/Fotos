@@ -2,6 +2,7 @@ import { createApp } from "./app.js";
 import { acquireLock } from "./lifecycle.js";
 import { resolve } from "node:path";
 import { cloudStorage } from "./cloud-storage.js";
+import { MAX_VIDEO_BYTES } from "../shared/storage.js";
 try {
   process.loadEnvFile();
 } catch {
@@ -38,7 +39,7 @@ const runtime = await createApp({
     process.env.APP_ORIGIN || process.env.RENDER_EXTERNAL_URL || undefined,
   trustProxy: Number(process.env.TRUST_PROXY || 0),
   maxFileBytes: remote ? 50_000_000 : mb("MAX_FILE_MB", 200),
-  maxVideoFileBytes: remote ? 50_000_000 : mb("MAX_FILE_MB", 200),
+  maxVideoFileBytes: remote ? MAX_VIDEO_BYTES : mb("MAX_FILE_MB", 200),
   maxStorageBytes: remote ? 900_000_000 : mb("MAX_STORAGE_MB", 1024),
   databaseUrl: process.env.DATABASE_URL,
   databaseCa: process.env.DATABASE_CA,
