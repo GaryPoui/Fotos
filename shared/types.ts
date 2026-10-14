@@ -11,6 +11,7 @@ export interface Media {
   mime: string;
   size: number;
   createdAt: string;
+  capturedAt?: string;
 }
 export interface Note {
   id: string;

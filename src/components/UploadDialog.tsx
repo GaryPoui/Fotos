@@ -11,6 +11,7 @@ import { Dialog } from "./Dialog";
 import { api, bytes, today, upload } from "../lib";
 import { fileLimit, availableBytes } from "../../shared/storage";
 import { prepareImage } from "../prepare-image";
+import { readCaptureMetadata } from "../../shared/photo-metadata";
 import { cloudEnabled } from "../cloud/config";
 import type { AlbumCustomization, Library } from "../../shared/types";
 import { albumTitle, albumKey } from "../../shared/albums";
@@ -175,6 +176,14 @@ export function UploadDialog({
         change(i, { status: "uploading", error: undefined, progress: 0 });
         try {
           change(i, { status: "preparing" });
+          if (!remaining[i].metadataRead) {
+            const file = remaining[i].file;
+            const isPhoto = type === "memories" && (file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|avif|heic|heif)$/i.test(file.name));
+            const capturedAt = isPhoto ? await readCaptureMetadata(file) : null;
+            remaining[i] = { ...remaining[i], metadataRead: true, capturedAt };
+            change(i, { metadataRead: true, capturedAt });
+            await saveDraft(draft(remaining)).catch(() => {});
+          }
           const prepared =
             type === "memories"
               ? await prepareImage(items[i].file, maxFile, (message) =>
@@ -195,6 +204,7 @@ export function UploadDialog({
               album: albumKey(album, preferences),
               tags: JSON.stringify(tagList),
               artist,
+              capturedAt: remaining[i].capturedAt || "",
             },
             (n) => change(i, { progress: n }),
             { id: items[i].id, signal: controller.current!.signal },
@@ -284,6 +294,7 @@ export function UploadDialog({
           Los pendientes se conservan temporalmente en este dispositivo. Al
           terminar o cerrar sesión se borran de aquí.
         </p>
+        {type === "memories" && <p className="form-help">Elegí el día del recuerdo. La hora de cada foto se lee automáticamente para ordenarlas, cuando está en sus metadatos.</p>}
         <div
           className="dropzone"
           onDragOver={(e) => e.preventDefault()}

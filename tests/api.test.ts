@@ -69,6 +69,25 @@ describe("Private space", () => {
 });
 
 describe("Persistent memories", () => {
+  it("keeps the manual day and extracts camera seconds without changing originals or accepting a conflicting hint",async()=>{
+    await login();
+    const jpeg=await sharp(png).jpeg().withExif({IFD2:{DateTimeOriginal:"2025:04:03 19:02:09",OffsetTimeOriginal:"+09:00"}}).toBuffer();
+    const response=await agent.post("/api/media").set(mutation).field("date","2012-02-14").field("capturedAt","2000-01-01T01:00:00").attach("file",jpeg,"clock.jpg").expect(201);
+    expect(response.body.date).toBe("2012-02-14");expect(response.body.capturedAt).toBe("2025-04-03T19:02:09");
+    const original=await agent.get("/api/files/"+response.body.id).expect(200);expect(original.body).toEqual(jpeg);
+    await agent.patch("/api/media/"+response.body.id).set(mutation).send({capturedAt:"2000-01-01T00:00:00"}).expect(400);
+    const patched=await agent.patch("/api/media/"+response.body.id).set(mutation).send({date:"2011-01-01"}).expect(200);
+    expect(patched.body.date).toBe("2011-01-01");expect(patched.body.capturedAt).toBe("2025-04-03T19:02:09");
+    await agent.delete("/api/media/"+response.body.id).set(mutation).expect(204);
+    expect(await runtime.db.prepare("SELECT key FROM meta WHERE key LIKE 'photo-clock:%'").all()).toEqual([]);
+  });
+  it("does not invent missing seconds or reinterpret capture records from the withdrawn feature",async()=>{
+    await login();
+    const uploaded=await agent.post("/api/media").set(mutation).field("date","2001-01-01").field("capturedAt","2025-04-03T19:02").attach("file",png,"no-exif.png").expect(201);
+    await runtime.db.prepare("INSERT INTO meta (key,value) VALUES (?,?)").run("capture:"+uploaded.body.id,JSON.stringify({capturedAt:"2020-01-01T20:00:00"}));
+    const library=(await agent.get("/api/library").expect(200)).body;
+    expect(library.media[0].capturedAt).toBeUndefined();expect(library.media[0].date).toBe("2001-01-01");
+  });
   it("uploads, edits, streams privately with ranges and deletes a photo", async () => {
     await login();
     const created = await agent

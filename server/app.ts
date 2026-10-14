@@ -26,6 +26,8 @@ import { openDatabase, type Database } from "./database.js";
 import type { ObjectStorage } from "./cloud-storage.js";
 import { videoDescriptor } from "./video-parts.js";
 import { videoUploads } from "./video-uploads.js";
+import { photoClocks, readPhotoClock } from "./photo-clock.js";
+import { compareMedia, validCapturedAt } from "../shared/photo-clock.js";
 import { inspectFile, thumbnail } from "./files.js";
 import type { Media, Note, Settings, AlbumCustomization, Place, PlaceCandidate } from "../shared/types.js";
 import { albumKey, albumTitle, albumNameKey } from "../shared/albums.js";
@@ -175,6 +177,7 @@ export async function createApp(options: AppOptions) {
     maxVideoFile = options.maxVideoFileBytes ?? maxFile,
     maxStorage = options.maxStorageBytes ?? 1024 * 1024 * 1024;
   const journals = options.objectStorage ? videoUploads(db, options.objectStorage) : undefined;
+  const clocks = photoClocks(db);
   await journals?.recover();
   const used = async (exclude?: string) =>
     Number(
@@ -340,11 +343,11 @@ export async function createApp(options: AppOptions) {
       : { names: "Ailu y Tomy", title: "Nuestro rincón", since: "" };
   };
   const mediaRows = async () =>
-    (
+    (await clocks.list((
       (await db
         .prepare("SELECT * FROM media ORDER BY date DESC, createdAt DESC")
         .all()) as unknown as MediaRow[]
-    ).map(publicMedia);
+    ).map(publicMedia))).sort((a,b) => compareMedia(a,b));
   const noteRows = async () =>
     (
       (await db
@@ -450,6 +453,7 @@ export async function createApp(options: AppOptions) {
     const uploadedKeys: string[] = [];
     let committed = false;
     let reservedId = "";
+    let clockSaved = false;
     let pendingId = "", pendingFilename = "", insertAttempted = false;
     let releaseUpload!: () => void;
     const previousUpload = uploadTail;
@@ -471,7 +475,7 @@ export async function createApp(options: AppOptions) {
         .prepare("SELECT * FROM media WHERE id=?")
         .get(uploadId);
       if (existing) {
-        res.status(200).json(publicMedia(existing as unknown as MediaRow));
+        res.status(200).json(await clocks.enrich(publicMedia(existing as unknown as MediaRow)));
         return;
       }
       const input = mediaInput.parse({
@@ -494,6 +498,9 @@ export async function createApp(options: AppOptions) {
       }
       if (req.file.size > (detected.kind === "video" ? maxVideoFile : maxFile))
         throw new ApiError(413, detected.kind === "video" ? "Este video supera el límite permitido." : "Las fotos y canciones tienen un límite de " + (maxFile / 1024 / 1024).toFixed(1) + " MB.");
+      const capturedAt = detected.kind === "photo"
+        ? await readPhotoClock(tempPath) ?? (validCapturedAt(req.body.capturedAt) ? req.body.capturedAt : null)
+        : null;
       if ((await used(uploadId)) + req.file.size > maxStorage)
         throw new ApiError(
           413,
@@ -539,6 +546,10 @@ export async function createApp(options: AppOptions) {
         target = join(mediaDir, filename);
         renameSync(tempPath, target);
       }
+      if (capturedAt) {
+        clockSaved = true;
+        await clocks.save(id, capturedAt);
+      }
       insertAttempted = true;
       await db
         .prepare(
@@ -565,11 +576,11 @@ export async function createApp(options: AppOptions) {
       res
         .status(201)
         .json(
-          publicMedia(
+          await clocks.enrich(publicMedia(
             (await db
               .prepare("SELECT * FROM media WHERE id=?")
               .get(id)) as unknown as MediaRow,
-          ),
+          )),
         );
     } finally {
       try {
@@ -595,6 +606,7 @@ export async function createApp(options: AppOptions) {
           }
         }
         if (!committed && reservedId && !uploadedKeys.length) await journals!.forget(reservedId);
+        if (!committed && clockSaved) await clocks.remove(pendingId).catch(() => console.error("Hora de una subida fallida pendiente de limpieza."));
         for (const path of [tempPath, target, thumb])
           if (path && existsSync(path)) unlinkSync(path);
       } finally {
@@ -636,7 +648,7 @@ export async function createApp(options: AppOptions) {
         input.artist,
         row.id,
       );
-    res.json(publicMedia(await findMedia(row.id)));
+    res.json(await clocks.enrich(publicMedia(await findMedia(row.id))));
   });
   app.delete("/api/media/:id", async (req, res) => {
     const row = await findMedia(String(req.params.id));
@@ -651,6 +663,7 @@ export async function createApp(options: AppOptions) {
     ])
       if (existsSync(path)) unlinkSync(path);
     await db.prepare("DELETE FROM media WHERE id=?").run(row.id);
+    await clocks.remove(row.id);
     res.status(204).end();
   });
   app.get("/api/files/:id", async (req, res, next) => {

@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+const sharp = createRequire(import.meta.url)("sharp") as typeof import("sharp");
 const png = readFileSync(new URL("./fixtures/cielo.png", import.meta.url));
 const headers = { "X-Requested-With": "NuestroRincon" };
 async function login(page: Page) {
@@ -41,6 +43,40 @@ async function uploadPhoto(page: Page, title: string) {
   await page.getByRole("button", { name: "Guardar en nuestro rincón" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
+test("manual days use automatic camera seconds consistently across views and recovered converted drafts",async({page},info)=>{
+  await login(page);await page.emulateMedia({reducedMotion:"reduce"});
+  if(info.project.name==="mobile")await page.setViewportSize({width:360,height:900});
+  const album="Relojes demo "+info.project.name, ids:string[]=[];
+  for(const [name,clock]of[["Última","12:30:03"],["Primera","12:30:01"],["Intermedia","12:30:02"]]){
+    const jpeg=await sharp(png).jpeg().withExif({IFD2:{DateTimeOriginal:"2025:04:03 "+clock,OffsetTimeOriginal:"+09:00"}}).toBuffer();
+    const result=await page.request.post("/api/media",{headers,multipart:{file:{name:"camera.jpg",mimeType:"image/jpeg",buffer:jpeg},title:name,date:"2012-02-14",album}});
+    expect(result.status()).toBe(201);const item=await result.json();ids.push(item.id);expect(item.date).toBe("2012-02-14");expect(item.capturedAt).toBe("2025-04-03T"+clock);
+  }
+  await page.reload();await page.getByRole("button",{name:"Mosaico",exact:true}).click();await page.getByRole("button",{name:"Mostrar filtros",exact:true}).click();
+  await page.getByRole("combobox",{name:"Álbum",exact:true}).selectOption(album);
+  await expect(page.locator(".memory-caption h3")).toHaveText(["Última","Intermedia","Primera"]);
+  await page.getByRole("combobox",{name:"Orden",exact:true}).selectOption("asc");
+  await expect(page.locator(".memory-caption h3")).toHaveText(["Primera","Intermedia","Última"]);
+  await page.getByRole("button",{name:"Línea de tiempo",exact:true}).click();await expect(page.locator(".memory-caption h3")).toHaveText(["Primera","Intermedia","Última"]);
+  await page.getByRole("button",{name:"Carrusel",exact:true}).click();await expect(page.locator(".viewer-info h3")).toHaveText("Primera");await expect(page.locator(".capture-clock")).toHaveText("Hora de toma: 12:30:01");
+  await page.getByRole("button",{name:"Recuerdo siguiente",exact:true}).click();await expect(page.locator(".capture-clock")).toHaveText("Hora de toma: 12:30:02");await assertFits(page);
+  await page.screenshot({path:`test-results/camera-clock-${info.project.name}.png`});
+  // A converted/recovered draft already holds the clock read from its original HEIC.
+  const id=await page.evaluate(async({album,bytes})=>{
+    const id=crypto.randomUUID();const file=new File([new Uint8Array(bytes)],"converted.jpg",{type:"image/png"});
+    const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open("rincon-pending-uploads",1);r.onupgradeneeded=()=>r.result.createObjectStore("drafts");r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+    await new Promise<void>((resolve,reject)=>{const tx=db.transaction("drafts","readwrite");tx.objectStore("drafts").put({type:"memories",title:"Convertida demo",date:"2012-02-14",album,tags:"",artist:"",items:[{id,file,status:"pending",progress:0,metadataRead:true,capturedAt:"2024-02-29T12:30:04"}]},"memories");tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});db.close();return id;
+  },{album,bytes:Array.from(png)});ids.push(id);
+  await page.reload();await page.getByRole("button",{name:"Retomar 1 recuerdo",exact:true}).click();
+  await expect(page.getByLabel("Fecha del recuerdo",{exact:true})).toHaveValue("2012-02-14");
+  expect(await page.getByRole("dialog").locator('input[type="time"]').count()).toBe(0);
+  await page.route("**/api/media",async route=>{if(route.request().method()==="POST")await route.abort("internetdisconnected");else await route.continue();},{times:1});
+  await page.getByRole("button",{name:"Guardar en nuestro rincón",exact:true}).click();await expect(page.getByRole("alert")).toContainText("Algunos archivos");await page.reload();
+  await page.getByRole("button",{name:"Retomar 1 recuerdo",exact:true}).click();await page.getByRole("button",{name:"Guardar en nuestro rincón",exact:true}).click();await expect(page.getByRole("dialog")).toHaveCount(0);
+  const library=await(await page.request.get("/api/library")).json();expect(library.media.find((m:{id:string})=>m.id===id).capturedAt).toBe("2024-02-29T12:30:04");
+  for(const own of ids)await page.request.delete("/api/media/"+own,{headers});
+});
+
 test("shows remaining storage and separate video limits in a mobile friendly uploader", async ({page}, info) => {
   await page.route("**/api/library", async route => {
     const response = await route.fetch();

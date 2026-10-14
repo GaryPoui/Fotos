@@ -1,4 +1,5 @@
 import type { Media } from "../shared/types";
+import { compareMedia } from "../shared/photo-clock";
 // Calendar days, independent of daylight-saving changes and clock-hour differences.
 function calendarDay(date: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NaN;
@@ -15,7 +16,7 @@ export function onThisDay(items: Media[], today: string) {
     .filter(
       (item) => item.date.slice(5) === today.slice(5) && item.date < today,
     )
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => compareMedia(a, b));
 }
 export function albumGroups(items: Media[]) {
   const groups = new Map<string, Media[]>();

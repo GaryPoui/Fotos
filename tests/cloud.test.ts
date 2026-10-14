@@ -11,6 +11,7 @@ import { createApp } from "../server/app.js";
 import { queryDatabase, type Database } from "../server/database.js";
 import { cloudStorage } from "../server/cloud-storage.js";
 import type { Server } from "node:http";
+import sharp from "sharp";
 
 const headers = { "X-Requested-With": "NuestroRincon" };
 const png = readFileSync(new URL("./fixtures/cielo.png", import.meta.url));
@@ -139,6 +140,28 @@ function upload(cookie: string) {
 }
 
 describe("Free hosting persistence", () => {
+  it("persists camera clocks separately, keeps manual dates and historical rows, and preserves confirmed originals after a lost commit response", async()=>{
+    const cookie=await login();const old=(await upload(cookie).field("title","Previous photo").field("date","2012-02-14").expect(201)).body;
+    await pg.query("INSERT INTO rincon.meta (key,value) VALUES ($1,$2)",["capture:"+old.id,JSON.stringify({capturedAt:"2020-01-01T23:00:00"})]);
+    const before=(await pg.query("SELECT * FROM rincon.media ORDER BY id")).rows;
+    const oldMetadata=(await pg.query("SELECT key,value FROM rincon.meta ORDER BY key")).rows;
+    const jpeg=await sharp(png).jpeg().withExif({IFD2:{DateTimeOriginal:"2025:04:03 12:30:02",OffsetTimeOriginal:"-03:00"}}).toBuffer();
+    const id=randomUUID();loseInsertResponse=true;
+    await request(runtime.app).post("/api/media").set(headers).set("Cookie",cookie).set("X-Upload-Id",id).field("date","2012-02-14").attach("file",jpeg,"clock.jpg").expect(500);
+    expect(files.get(id+".jpg")).toEqual(jpeg);
+    const retry=await request(runtime.app).post("/api/media").set(headers).set("Cookie",cookie).set("X-Upload-Id",id).field("capturedAt","2025-01-01T01:00:00").attach("file",png,"retry.png").expect(200);
+    expect(retry.body.capturedAt).toBe("2025-04-03T12:30:02");expect(retry.body.date).toBe("2012-02-14");
+    const stripped=(await request(runtime.app).post("/api/media").set(headers).set("Cookie",cookie).field("date","2012-02-14").field("capturedAt","2025-01-01T12:30:01").attach("file",png,"converted.png").expect(201)).body;
+    await runtime.close();runtime=await start();
+    const library=(await request(runtime.app).get("/api/library").set("Cookie",cookie).expect(200)).body;
+    expect(library.media.map((item:{id:string})=>item.id)).toEqual([id,stripped.id,old.id]);
+    expect(library.media.find((item:{id:string})=>item.id===old.id).capturedAt).toBeUndefined();
+    for(const row of before)expect((await pg.query("SELECT * FROM rincon.media WHERE id=$1",[(row as {id:string}).id])).rows[0]).toEqual(row);
+    for(const row of oldMetadata)expect((await pg.query("SELECT key,value FROM rincon.meta WHERE key=$1",[(row as {key:string}).key])).rows[0]).toEqual(row);
+    for(const own of[id,stripped.id])await request(runtime.app).delete("/api/media/"+own).set(headers).set("Cookie",cookie).expect(204);
+    expect((await pg.query("SELECT key FROM rincon.meta WHERE key LIKE 'photo-clock:%'")).rows).toEqual([]);
+    expect(files.get(old.id+".png")).toEqual(png);
+  });
   it("stores a playable >50MB original privately and reconstructs exact bytes, ranges and backups after restart", async () => {
     const cookie = await login();
     const photo = await upload(cookie).field("title", "Existing photo").expect(201);

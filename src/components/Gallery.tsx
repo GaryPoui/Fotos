@@ -19,6 +19,7 @@ import { api, formatDate, mediaUrl } from "../lib";
 import { Confirm, Dialog } from "./Dialog";
 import { Revisit } from "./Revisit";
 import { onThisDay } from "../moments";
+import { compareMedia } from "../../shared/photo-clock";
 import { Viewer } from "./Viewer";
 type View = "grid" | "timeline" | "carousel";
 export function Gallery({
@@ -82,9 +83,7 @@ export function Gallery({
               .includes(query.toLocaleLowerCase("es")),
         )
         .sort((a, b) =>
-          sort === "asc"
-            ? a.date.localeCompare(b.date)
-            : b.date.localeCompare(a.date),
+          compareMedia(a, b, sort === "asc" ? "asc" : "desc"),
         ),
     [items, preferences, album, kind, favorites, query, sort, dayOnly, calendarToday],
   );

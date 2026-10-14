@@ -12,6 +12,7 @@ import {
 import type { Media, AlbumCustomization } from "../../shared/types";
 import { albumTitle } from "../../shared/albums";
 import { formatDate, mediaUrl } from "../lib";
+import { captureTime } from "../../shared/photo-clock";
 import { Dialog } from "./Dialog";
 import { Coverflow } from "./Coverflow";
 export function Viewer({
@@ -214,6 +215,7 @@ export function Viewer({
             {formatDate(item.date, true)}
             {item.album && " · " + albumTitle(item.album, preferences)}
           </p>
+          {item.kind === "photo" && <p className="capture-clock">{captureTime(item) ? "Hora de toma: " + captureTime(item) : "Sin hora de toma · orden de subida"}</p>}
           {item.tags.length > 0 && (
             <div className="tags">
               {item.tags.map((t) => (
