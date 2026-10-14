@@ -1,5 +1,5 @@
 # Feature Specification: Horas de fotos anteriores
-**Branch**: main | **Created**: 2026-10-14 | **Status**: Ready
+**Branch**: main | **Created**: 2026-10-14 | **Status**: Applied and verified
 **Input**: Organizar también fotos viejas por hora, minuto y segundo además de la fecha.
 ## User Scenarios & Testing
 ### US1 - Ordenar fotos anteriores (Priority: P1)

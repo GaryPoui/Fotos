@@ -164,14 +164,11 @@ if (mode === "scan") {
       (sql, values) => client.query(sql, values),
       proposal.candidates,
     );
-    writeFileSync(
-      join(directory, "applied.json"),
-      JSON.stringify(
-        { appliedAt: new Date().toISOString(), ...result },
-        null,
-        2,
-      ),
-    );
+    const report = JSON.stringify({ appliedAt: new Date().toISOString(), ...result }, null, 2);
+    const reportPath = join(directory, "applied-" + randomUUID() + ".json");
+    writeFileSync(reportPath, report, { flag: "wx" });
+    try { writeFileSync(join(directory, "applied.json"), report, { flag: "wx" }); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
     console.log(
       JSON.stringify({
         added: result.inserted.length,
