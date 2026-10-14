@@ -13,9 +13,13 @@ export const placeInput = z
       "visit",
       "important",
       "park",
+      "culture",
+      "event",
       "other",
     ]),
     note: z.string().trim().max(1000).default(""),
+    rating: z.number().int().min(1).max(5).nullable().optional(),
+    photoId: z.string().uuid().nullable().optional(),
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
   })

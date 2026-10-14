@@ -221,6 +221,64 @@ test("places map saves, reloads, filters, edits and removes with confirmation wi
   }
 });
 
+test("place stars photos and culture/events survive reload and photo retry without duplicating originals",async({page},info)=>{
+  await login(page);
+  if(info.project.name==="mobile")await page.setViewportSize({width:360,height:900});
+  const before=(await (await page.request.get("/api/library")).json());
+  let placeId="",photoId="";
+  try{
+    await page.route("**/api/places/resolve",route=>route.fulfill({json:{results:[{name:"Museo — demo",address:"Buenos Aires",lat:-34.6,lng:-58.38}]}}));
+    await page.getByRole("button",{name:"Agregar lugar",exact:true}).click();
+    await page.getByLabel("Enlace de Google Maps").fill("https://maps.app.goo.gl/demo");
+    await expect(page.getByLabel("Nombre del lugar",{exact:true})).toHaveValue("Museo — demo");
+    await page.getByLabel("Categoría",{exact:true}).selectOption("culture");
+    await page.getByRole("button",{name:"Puntuar con 4 estrellas",exact:true}).click();
+    await page.getByLabel("Foto del lugar (opcional)").setInputFiles({name:"demo.png",mimeType:"image/png",buffer:png});
+    await expect(page.getByAltText("Vista previa de la foto del lugar")).toBeVisible();
+    await fits(page);
+    let fail=true;
+    await page.route("**/api/places",async route=>{
+      if(fail&&route.request().method()==="POST"){fail=false;await route.fulfill({status:503,json:{error:"Ejemplo: reintentá guardar el lugar"}});}else await route.continue();
+    });
+    await page.getByRole("button",{name:"Guardar lugar",exact:true}).click();
+    await expect(page.getByRole("alert")).toContainText("reintentá");
+    let library=await(await page.request.get("/api/library")).json();
+    const photos=library.media.filter((item:{id:string})=>!before.media.some((old:{id:string})=>old.id===item.id));
+    expect(photos).toHaveLength(1);photoId=photos[0].id;
+    await page.getByRole("button",{name:"Guardar lugar",exact:true}).click();
+    await expect(page.locator(".place-editor")).toHaveCount(0);
+    library=await(await page.request.get("/api/library")).json();
+    placeId=library.places.find((p:{name:string})=>p.name==="Museo — demo").id;
+    expect(library.media).toHaveLength(before.media.length+1);
+    await page.reload();await page.getByRole("button",{name:"Mapa",exact:true}).click();
+    const filters=page.getByRole("group",{name:"Filtrar lugares por categoría"});
+    await filters.getByRole("button",{name:"Cultura",exact:true}).click();
+    await expect(page.locator(".place-marker")).toHaveCount(1);
+    await page.getByRole("button",{name:"Ver en mapa: Museo — demo",exact:true}).click();
+    const detail=page.getByRole("region",{name:"Detalle del lugar"});
+    await expect(detail.getByLabel("4 de 5 estrellas")).toBeVisible();
+    await expect(detail.getByAltText("Foto de Museo — demo")).toBeVisible();
+    await fits(page);
+    await detail.scrollIntoViewIfNeeded();
+    await page.screenshot({path:"test-results/place-reviews-"+info.project.name+".png"});
+    await page.getByRole("button",{name:"Editar lugar",exact:true}).click();
+    await page.getByLabel("Categoría",{exact:true}).selectOption("event");
+    await page.getByRole("button",{name:"Sin puntuar",exact:true}).click();
+    await page.getByRole("button",{name:"Quitar foto del mapa",exact:true}).click();
+    await page.getByRole("button",{name:"Guardar lugar",exact:true}).click();
+    await expect(page.locator(".place-editor")).toHaveCount(0);
+    await filters.getByRole("button",{name:"Eventos",exact:true}).click();
+    await expect(page.locator(".place-marker")).toHaveCount(1);
+    library=await(await page.request.get("/api/library")).json();
+    expect(library.media.find((m:{id:string})=>m.id===photoId)).toBeTruthy();
+    expect(library.places.find((p:{id:string})=>p.id===placeId)).toMatchObject({rating:null,photoId:null});
+    expect(library.notes).toEqual(before.notes);expect(library.albums).toEqual(before.albums);
+  }finally{
+    if(placeId)await page.request.delete("/api/places/"+placeId,{headers});
+    if(photoId)await page.request.delete("/api/media/"+photoId,{headers});
+  }
+});
+
 test("Maps links fill the draft automatically, preserve corrections and discard stale replies without saving", async ({
   page,
 }) => {

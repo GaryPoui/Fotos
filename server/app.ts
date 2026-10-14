@@ -365,7 +365,13 @@ export async function createApp(options: AppOptions) {
   };
   const getPlaces = async ():Promise<Place[]> => {
     const rows=await db.prepare("SELECT value FROM meta WHERE key LIKE 'place:%'").all() as {value:string}[];
-    return rows.flatMap(row=>{try{const parsed=savedPlace.safeParse(JSON.parse(row.value));return parsed.success?[parsed.data]:[];}catch{return [];}});
+    const photos=new Set((await db.prepare("SELECT * FROM media").all() as unknown as MediaRow[]).filter(row=>row.kind==="photo").map(row=>row.id));
+    return rows.flatMap(row=>{try{const parsed=savedPlace.safeParse(JSON.parse(row.value));if(!parsed.success)return [];const place=parsed.data;if(place.photoId&&!photos.has(place.photoId))place.photoId=null;return [place];}catch{return [];}});
+  };
+  const validatePlacePhoto=async(photoId:string|null|undefined)=>{
+    if(!photoId)return;
+    const photo=await db.prepare("SELECT * FROM media WHERE id=?").get(photoId) as unknown as MediaRow|undefined;
+    if(!photo||photo.kind!=="photo")throw new ApiError(400,"La foto del lugar no está disponible. Elegí otra foto.");
   };
   const resolvePlace=options.placeResolver||createPlaceResolver({origin:options.origin});
   app.post("/api/places/resolve",async(req,res)=>{
@@ -377,6 +383,7 @@ export async function createApp(options: AppOptions) {
   });
   app.post("/api/places",async(req,res)=>{
     const input=placeInput.parse(req.body),now=new Date().toISOString();
+    await validatePlacePhoto(input.photoId);
     const place:Place={...input,id:randomUUID(),createdAt:now,updatedAt:now};
     await db.prepare("INSERT INTO meta (key,value) VALUES (?,?)").run("place:"+place.id,JSON.stringify(place));
     res.status(201).json(place);
@@ -386,7 +393,8 @@ export async function createApp(options: AppOptions) {
     const row=await db.prepare("SELECT value FROM meta WHERE key=?").get("place:"+id) as {value:string}|undefined;
     if(!row)throw new ApiError(404,"No encontramos este lugar. Recargá el mapa.");
     const previous=savedPlace.parse(JSON.parse(row.value));
-    const place:Place={...input,id,createdAt:previous.createdAt,updatedAt:new Date().toISOString()};
+    if(input.photoId!==undefined)await validatePlacePhoto(input.photoId);
+    const place:Place={...previous,...input,id,createdAt:previous.createdAt,updatedAt:new Date().toISOString()};
     await db.prepare("UPDATE meta SET value=? WHERE key=?").run(JSON.stringify(place),"place:"+id);
     res.json(place);
   });

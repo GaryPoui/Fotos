@@ -11,8 +11,11 @@ import {
   ExternalLink,
   X,
   LoaderCircle,
+  Star,
 } from "lucide-react";
-import { api } from "../lib";
+import { api, upload, today, mediaUrl, bytes } from "../lib";
+import { prepareImage } from "../prepare-image";
+import { readCaptureMetadata } from "../../shared/photo-metadata";
 import type { Place, PlaceCandidate, PlaceCategory } from "../../shared/types";
 import { mapsLink, placeCategories } from "../../shared/places";
 import { CategoryIcon, PlaceCanvas } from "./PlaceCanvas";
@@ -38,11 +41,24 @@ function isMapsLink(value: string) {
 export default function PlacesMap({
   places,
   onChanged,
+  storage,
 }: {
   places: Place[];
   onChanged: (message: string) => Promise<void>;
+  storage: { maxFile: number; available: number };
 }) {
   const [filter, setFilter] = useState<PlaceCategory | "all">("all");
+  const [rating,setRating]=useState<number|null>(null);
+  const [photoId,setPhotoId]=useState<string|null>(null);
+  const [photo,setPhoto]=useState<File|null>(null);
+  const [photoPreview,setPhotoPreview]=useState("");
+  const [photoProgress,setPhotoProgress]=useState("");
+  const photoUploadId=useRef<string|null>(null);
+  useEffect(()=>{
+    if(!photo){setPhotoPreview("");return;}
+    const url=URL.createObjectURL(photo);setPhotoPreview(url);
+    return ()=>URL.revokeObjectURL(url);
+  },[photo]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Place | "new" | null>(null);
   const [candidate, setCandidate] = useState<PlaceCandidate | null>(null);
@@ -98,6 +114,9 @@ export default function PlacesMap({
     setQuery("");
     setError("");
     setSearchMessage("");
+    setPhoto(null);
+    photoUploadId.current=null;
+    setPhotoProgress("");
   };
   const start = (place: Place | "new") => {
     closeEditor();
@@ -106,6 +125,8 @@ export default function PlacesMap({
     setAddress(place === "new" ? "" : place.address);
     setCategory(place === "new" ? "cafe" : place.category);
     setNote(place === "new" ? "" : place.note);
+    setRating(place === "new" ? null : place.rating ?? null);
+    setPhotoId(place === "new" ? null : place.photoId ?? null);
     setCandidate(place === "new" ? null : place);
     setDeleteConfirm(false);
     if (place !== "new") view("candidate");
@@ -192,11 +213,27 @@ export default function PlacesMap({
     setBusy(true);
     setError("");
     try {
+      let nextPhotoId=photoId;
+      if(photo){
+        photoUploadId.current ||= crypto.randomUUID();
+        const capturedAt=await readCaptureMetadata(photo);
+        const file=await prepareImage(photo,storage.maxFile,setPhotoProgress);
+        if(!file.type.startsWith("image/"))throw new Error("Elegí una foto para este lugar.");
+        if(file.size>storage.maxFile)throw new Error("La foto supera el límite de "+bytes(storage.maxFile)+".");
+        setPhotoProgress("Subiendo foto…");
+        await upload(file,{title:name.trim()||file.name,date:today(),album:"Lugares",capturedAt:capturedAt||""},
+          n=>setPhotoProgress("Subiendo foto: "+n+"%"),{id:photoUploadId.current});
+        nextPhotoId=photoUploadId.current;
+        setPhotoId(nextPhotoId);setPhoto(null);
+        setPhotoProgress("Foto guardada en Recuerdos. Guardando el lugar…");
+      }
       const body = {
         name,
         address,
         category,
         note,
+        rating,
+        photoId:nextPhotoId,
         lat: candidate.lat,
         lng: candidate.lng,
       };
@@ -538,6 +575,27 @@ export default function PlacesMap({
                 disabled={busy}
               />
             </label>
+            <fieldset className="place-wide place-rating-editor" disabled={busy}>
+              <legend>Nuestra puntuación</legend>
+              <div className="place-stars">
+                {[1,2,3,4,5].map(value=><button key={value} type="button" aria-label={"Puntuar con "+value+" estrellas"} aria-pressed={rating===value} onClick={()=>setRating(value)}><Star size={25} fill={rating!==null&&value<=rating?"currentColor":"none"}/></button>)}
+                <button type="button" className="button secondary" onClick={()=>setRating(null)}>Sin puntuar</button>
+              </div>
+              <small>{rating?rating+" de 5 estrellas":"Todavía no lo puntuamos"}</small>
+            </fieldset>
+            <div className="place-wide place-photo-editor">
+              <label>Foto del lugar (opcional)
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.heic,.heif" disabled={busy} onChange={event=>{
+                  const file=event.target.files?.[0];
+                  if(file){setPhoto(file);photoUploadId.current=crypto.randomUUID();setPhotoProgress("");setError("");}
+                  event.target.value="";
+                }}/>
+              </label>
+              {(photoPreview||photoId)&&<img className="place-photo" src={photoPreview||mediaUrl(photoId!,true)} alt="Vista previa de la foto del lugar"/>}
+              {(photo||photoId)&&<button className="button secondary" type="button" disabled={busy} onClick={()=>{setPhoto(null);setPhotoId(null);photoUploadId.current=null;setPhotoProgress("");}}>Quitar foto del mapa</button>}
+              <small>También se guarda en Recuerdos, álbum Lugares. Cambiarla o quitarla del mapa conserva la foto anterior. Límite: {bytes(storage.maxFile)} por foto; disponible: {bytes(storage.available)}.</small>
+              {photoProgress&&<p role="status">{photoProgress}</p>}
+            </div>
             <p className="place-wide places-message">
               {candidate
                 ? "Punto a guardar: " +
@@ -636,6 +694,8 @@ export default function PlacesMap({
             </button>
           </div>
           {selected.address && <p>{selected.address}</p>}
+          <PlaceRating value={selected.rating}/>
+          {selected.photoId&&<img className="place-photo" src={mediaUrl(selected.photoId,true)} alt={"Foto de "+selected.name}/>}
           {selected.note && <p className="place-note">{selected.note}</p>}
           <div className="place-actions">
             <a
@@ -716,6 +776,7 @@ export default function PlacesMap({
                 </span>
                 <span>
                   <strong>{place.name}</strong>
+                  <PlaceRating value={place.rating}/>
                   <small>
                     {
                       placeCategories.find((item) => item.id === place.category)
@@ -724,6 +785,7 @@ export default function PlacesMap({
                     {place.address ? " · " + place.address : ""}
                   </small>
                 </span>
+                {place.photoId&&<img className="place-list-photo" src={mediaUrl(place.photoId,true)} alt="" loading="lazy"/>}
               </button>
             </li>
           ))}
@@ -747,4 +809,9 @@ export default function PlacesMap({
       )}
     </section>
   );
+}
+
+function PlaceRating({value}:{value?:number|null}){
+  if(!value)return null;
+  return <span className="place-rating" aria-label={value+" de 5 estrellas"}>{[1,2,3,4,5].map(n=><Star key={n} size={16} aria-hidden="true" fill={n<=value?"currentColor":"none"}/>)}</span>;
 }

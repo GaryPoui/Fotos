@@ -2533,3 +2533,16 @@ input[type="range"] {
 .storage-meter span{display:block;height:100%;background:linear-gradient(90deg,#88c8e7,#e8a5bf);border-radius:inherit}
 .upload-space{color:#395b70;font-weight:600}
 @media(max-width:480px){.storage-summary{gap:.75rem;padding:.9rem 1rem}.storage-meter{flex-basis:100%;max-width:none}}
+/* Optional place memories share the private gallery upload and storage quota. */
+.place-rating-editor { border: 0; padding: 0; margin: 0; min-width: 0; }
+.place-rating-editor legend { font-weight: 600; margin-bottom: .5rem; }
+.place-stars { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
+.place-stars > button:not(.button) { width: 44px; height: 44px; border: 0; border-radius: 12px; background: #fdf0f6; color: #a34e77; display: grid; place-items: center; cursor: pointer; }
+.place-stars > button[aria-pressed="true"] { outline: 2px solid #a34e77; outline-offset: -2px; }
+.place-rating { display: inline-flex; gap: 3px; color: #a34e77; margin: .4rem 0; }
+.place-photo-editor { display: grid; gap: .75rem; min-width: 0; }
+.place-photo-editor input[type="file"] { width: 100%; min-width: 0; max-width: 100%; }
+.place-photo-editor small { line-height: 1.5; }
+.place-photo { width: 100%; max-width: 520px; height: auto; max-height: 300px; object-fit: contain; border-radius: 16px; background: #edf6fb; display: block; margin: .75rem 0; }
+.place-list-photo { flex-shrink: 0; width: 58px; height: 58px; border-radius: 12px; object-fit: cover; margin-left: auto; }
+.places-list button > span:not(.place-list-icon) { min-width: 0; }

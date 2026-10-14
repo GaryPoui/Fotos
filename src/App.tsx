@@ -234,7 +234,7 @@ export default function App() {
             />
             {page === "map" ? (
               <Suspense fallback={<div className="loading-screen"><LoaderCircle className="spin"/><p>Abriendo nuestro mapa…</p></div>}>
-                <PlacesMap places={library.places || []} onChanged={changed}/>
+                <PlacesMap places={library.places || []} storage={{maxFile:library.storage.maxFile,available:library.storage.available??Math.max(0,library.storage.limit-library.storage.used)}} onChanged={changed}/>
               </Suspense>
             ) : (<>
             {page === "memories" ? (

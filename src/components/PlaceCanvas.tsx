@@ -10,6 +10,8 @@ import {
   Heart,
   Trees,
   MapPin,
+  Landmark,
+  CalendarDays,
 } from "lucide-react";
 import type { Place, PlaceCandidate, PlaceCategory } from "../../shared/types";
 import { placeCategories } from "../../shared/places";
@@ -21,6 +23,8 @@ export const placeIcons = {
   visit: Compass,
   important: Heart,
   park: Trees,
+  culture: Landmark,
+  event: CalendarDays,
   other: MapPin,
 };
 export function CategoryIcon({

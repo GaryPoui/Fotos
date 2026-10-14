@@ -34,6 +34,26 @@ async function login() {
 }
 
 describe("Private space", () => {
+  it("validates optional place stars and photo references while preserving older fields and originals",async()=>{
+    await agent.post("/api/places").set(mutation).send({}).expect(401);
+    await login();
+    const photo=(await agent.post("/api/media").set(mutation).attach("file",png,"place.png").expect(201)).body;
+    const input={name:"Museo de ejemplo",category:"culture",lat:-34.6,lng:-58.38,rating:5,photoId:photo.id};
+    const place=(await agent.post("/api/places").set(mutation).send(input).expect(201)).body;
+    for(const rating of [0,6,2.5,"5"])await agent.patch("/api/places/"+place.id).set(mutation).send({...input,rating}).expect(400);
+    await agent.patch("/api/places/"+place.id).set(mutation).send({...input,photoId:"00000000-0000-4000-8000-000000000000"}).expect(400);
+    const edited=(await agent.patch("/api/places/"+place.id).set(mutation).send({name:"Evento de ejemplo",category:"event",lat:-34.6,lng:-58.38}).expect(200)).body;
+    expect(edited).toMatchObject({rating:5,photoId:photo.id,createdAt:place.createdAt});
+    await agent.patch("/api/places/"+place.id).set(mutation).send({...input,rating:null,photoId:null}).expect(200);
+    await agent.get("/api/files/"+photo.id).expect(200).expect(res=>expect(res.body).toEqual(png));
+    await agent.delete("/api/places/"+place.id).set(mutation).expect(204);
+    expect((await agent.get("/api/library")).body.media).toHaveLength(1);
+    const legacy=(await agent.post("/api/places").set(mutation).send({name:"Café anterior",category:"cafe",lat:0,lng:0}).expect(201)).body;
+    expect(legacy.rating).toBeUndefined();expect(legacy.photoId).toBeUndefined();
+    await agent.patch("/api/places/"+legacy.id).set(mutation).send({...input}).expect(200);
+    await agent.delete("/api/media/"+photo.id).set(mutation).expect(204);
+    expect((await agent.get("/api/library")).body.places[0].photoId).toBeNull();
+  });
   it("protects content and files, creates a session and revokes it on logout", async () => {
     await agent.get("/api/library").expect(401);
     await agent.get("/api/files/nonexistent").expect(401);

@@ -50,6 +50,8 @@ export type PlaceCategory =
   | "visit"
   | "important"
   | "park"
+  | "culture"
+  | "event"
   | "other";
 export interface PlaceCandidate {
   name: string;
@@ -63,6 +65,8 @@ export interface Place
   extends Omit<PlaceCandidate, "approximate" | "addressApproximate"> {
   id: string;
   category: PlaceCategory;
+  rating?: number | null;
+  photoId?: string | null;
   note: string;
   createdAt: string;
   updatedAt: string;

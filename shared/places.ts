@@ -10,6 +10,8 @@ export const placeCategories: {
   { id: "visit", label: "Lugares a visitar", color: "#345c78" },
   { id: "important", label: "Lugares importantes", color: "#b13c63" },
   { id: "park", label: "Parques y paseos", color: "#37785d" },
+  { id: "culture", label: "Cultura", color: "#547694" },
+  { id: "event", label: "Eventos", color: "#a25283" },
   { id: "other", label: "Otros", color: "#536b7b" },
 ];
 export const validPoint = (lat: number, lng: number) =>

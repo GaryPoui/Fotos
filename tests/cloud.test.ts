@@ -258,6 +258,24 @@ describe("Free hosting persistence", () => {
     expect(files.size).toBe(0);
     expect((await pg.query("SELECT key FROM rincon.meta WHERE key LIKE 'video-upload:%'")).rows).toEqual([]);
   },60_000);
+  it("persists rated place photos across staging replacement and never deletes their originals with the place",async()=>{
+    const cookie=await login();
+    const photo=(await request(runtime.app).post("/api/media").set(headers).set("Cookie",cookie).field("album","Lugares").attach("file",png,"place.png").expect(201)).body;
+    const input={name:"Museo — demo",category:"culture",rating:4,photoId:photo.id,lat:-34.6,lng:-58.38};
+    const place=(await request(runtime.app).post("/api/places").set(headers).set("Cookie",cookie).send(input).expect(201)).body;
+    const original=Buffer.from(files.get(photo.id+".png")!);
+    const used=(await request(runtime.app).get("/api/library").set("Cookie",cookie)).body.storage.used;
+    expect(used).toBeGreaterThan(png.length);
+    await runtime.close();rmSync(dir,{recursive:true,force:true});runtime=await start();
+    let library=(await request(runtime.app).get("/api/library").set("Cookie",cookie)).body;
+    expect(library.places).toContainEqual(place);expect(library.media[0].album).toBe("Lugares");
+    await request(runtime.app).get("/api/files/"+photo.id).expect(401);
+    await request(runtime.app).get("/api/files/"+photo.id).set("Cookie",cookie).expect(200).expect(res=>expect(res.body).toEqual(original));
+    await request(runtime.app).patch("/api/places/"+place.id).set(headers).set("Cookie",cookie).send({...input,category:"event",rating:null,photoId:null}).expect(200);
+    await request(runtime.app).delete("/api/places/"+place.id).set(headers).set("Cookie",cookie).expect(204);
+    library=(await request(runtime.app).get("/api/library").set("Cookie",cookie)).body;
+    expect(library.media).toHaveLength(1);expect(library.storage.used).toBe(used);expect(files.get(photo.id+".png")).toEqual(original);
+  });
   it("persists private places in PostgreSQL across staging replacement without changing memories or objects", async () => {
     const cookie=await login();
     await upload(cookie).expect(201);
