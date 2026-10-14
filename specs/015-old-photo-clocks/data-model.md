@@ -1,0 +1,2 @@
+# Data model
+Propuesta privada schema1: candidatos{id,before(rawfila),capturedAt,sha256,original(relativo)}, faltantes y fallos. No cookies/secretos. Meta nuevo photo-clock:id → {capturedAt}; sólo si clave inexistente y fila idéntica y tipo photo. Resultado inserted/skippedChanged/skippedExisting. Cualquier clave existente, incluso malformada, permanece intacta. Copias originales son locales privadas; nunca PUT/DELETE remotos.
