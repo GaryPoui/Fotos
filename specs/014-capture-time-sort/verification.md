@@ -10,4 +10,11 @@
 - PGlite: hora opcional persistente sin DDL, reinicio y reintento idempotente, fallback de JPEG convertido, todas las filas anteriores intactas, original y hora confirmados conservados cuando se pierde la respuesta de INSERT; borrado sólo del reloj del id nuevo.
 - Fecha manual y límites200MB video/50M foto/audio conservados; ningún original comprimido/reemplazado ni cuenta activada. Recomendación de espacio con fuentes en storage-options.md.
 
-Pendiente: CI, publicación y prueba pública con fotos sintéticas propias, comparación SQL final y capturas.
+## Publicación y conservación final — 2026-10-14
+- Commit `3aaec30`, subido a main. GitHub Actions `38521291233`: SUCCESS en pruebas, build, navegador, Docker y persistencia tras recrear contenedor.
+- Render `dep-db7hvec9v7es73c51sng`: Deploy succeeded / Live, fuente `3aaec30`, publicado el2026-10-14 a las03:22 ART. Frontend público `/assets/index-BqK3VFQ6.js` coincide con build verificado.
+- UI pública: tres JPEG sintéticos con DateTimeOriginal12:30:03/01/02 y offset+09:00 se subieron mediante el formulario, sin escribir hora; el día manual2012-02-14 quedó intacto y la hora de cámara2025-04-03 se extrajo automáticamente hasta el segundo. Cada descarga original tiene SHA-256 idéntico al JPEG generado.
+- QA360/390/1440: mosaico/línea de tiempo/carrusel comparten orden, asc/desc funciona, visor muestra HH:mm:ss y el día manual; no hay desbordes. Las imágenes y miniaturas se decodificaron correctamente antes de capturar evidencia.
+- Sólo se retiraron las fotos demo generadas con prefijo/álbum aleatorio y guardas de identidad/título/tamaño/día. Library anterior conservó archivos, notas, álbumes, lugares y ajustes; usados245222910, disponibles654777090, reservas0. La comparación SQL final confirma schema y cada fila histórica intactos:209 archivos,3 escritos,1 lugar, títulos/fechas/metadatos previos.
+- Capturas locales: `test-results/render-photo-clock-{360,390,1440}.png` y `test-results/render-photo-clock-viewer-{360,390,1440}.png`. Copia duradera de evidencia móvil en `backups/pre-capture-time-2026-10-14/proof-camera-clock-mobile.png`. Las capturas muestran exclusivamente fotos demo y ocultan contenido personal mediante filtrado de la respuesta de la biblioteca en el navegador de prueba; no se modificó ese contenido en servidor.
+- No compresión de originales, backfill, migración, concesión de permisos, cambio de contraseña ni nueva facturación. La recomendación de optimización/R2 se mantiene como asesoría separada.

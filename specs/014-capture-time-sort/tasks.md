@@ -11,7 +11,7 @@
 - [x] T006 Build, suites completas y responsive360/390/1440; casos sin EXIF, timestamps imposibles, zona, fallos y fecha manual intacta.
 ## Phase 5 US3 Espacio y entrega
 - [x] T007 Documentar recomendación con uso actual agregado y fuentes primarias, sin comprimir/migrar ni activar facturación.
-- [ ] T008 Commit/push/checks, publicar Render, probar nuevo orden con fotos sintéticas propias y remover sólo esos IDs; verificar históricos/schema y screenshots, completar verification.md y push final.
+- [x] T008 Commit/push/checks, publicar Render, probar nuevo orden con fotos sintéticas propias y remover sólo esos IDs; verificar históricos/schema y screenshots, completar verification.md y push final.
 ## Dependencies
 T001→T002→T003→T004→T005→T006→T007→T008. US2 protege cada paso; US3 puede investigarse en paralelo sin mutaciones.
 ## Parallel opportunities

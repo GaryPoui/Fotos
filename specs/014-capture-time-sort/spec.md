@@ -2,7 +2,7 @@
 
 **Feature Branch**: `main` (publicación autorizada)
 **Created**: 2026-10-13
-**Status**: Ready for implementation
+**Status**: Implemented and published 2026-10-14
 **Input**: Ordenar fotos por fecha, hora, minuto y segundo leyendo metadatos al subir, sin escribir la hora; asesorar sobre ahorro de espacio.
 
 ## Clarifications
