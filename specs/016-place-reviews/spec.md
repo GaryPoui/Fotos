@@ -1,5 +1,5 @@
 # 016 — Fotos y estrellas de nuestros lugares
-Fecha: 2026-10-14. Estado: en implementación.
+Fecha: 2026-10-14. Estado: implementado, verificado y publicado.
 
 ## Historias y aceptación
 US1: Al agregar o editar un lugar, Ailu y Tomy pueden elegir de una a cinco estrellas, cambiar o quitar la puntuación. Después de recargar se conserva y aparece en su ficha y lista.
